@@ -3,17 +3,21 @@ PACKAGE_NAME=open-blimp
 INSTALL_PATH=/etc/$PACKAGE_NAME/
 PYTHON_DIR=src/blimp_python_package/
 PYTHON_INSTALL_DIR=python/
+ROBOT_SIM_INSTALL_DIR=sim/
+ROBOT_SIM_DIR=model/
 CURRENT_DIR=$(pwd)
 
 Install()
 {
   echo $INSTALL_PATH
 #  sudo rm -rf $INSTALL_PATH
-  sudo mkdir -p $INSTALL_PATH
-  sudo mkdir -p $INSTALL_PATH/$PYTHON_INSTALL_DIR
+  sudo mkdir -p $INSTALL_PATH/
+  sudo mkdir -p $INSTALL_PATH/$PYTHON_INSTALL_DIR/
+  sudo mkdir -p $INSTALL_PATH/$ROBOT_SIM_INSTALL_DIR/
   cd $INSTALL_PATH
   sudo cp -r $CURRENT_DIR/$PYTHON_DIR/* $INSTALL_PATH/$PYTHON_INSTALL_DIR/
 
+  sudo cp -r $CURRENT_DIR/$ROBOT_SIM_DIR/* $INSTALL_PATH/$ROBOT_SIM_INSTALL_DIR/
 }
 
 Uninstall()
@@ -22,4 +26,3 @@ Uninstall()
 }
 
 Install
-Uninstall
