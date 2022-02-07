@@ -4,7 +4,7 @@ import serial
 import struct
 import numpy as np
 from numpy import pi
-from pid import PID
+from utils.pid import PID
 from utils.mixer import *
 from scipy.spatial.transform import Rotation as R
 from pi_zero_w_streaming.threaded_stream_rcv import ThreadedPiStream
