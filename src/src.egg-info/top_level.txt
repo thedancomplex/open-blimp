@@ -1,2 +1,0 @@
-pi_zero_w_streaming
-pyBlimp
