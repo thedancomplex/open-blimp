@@ -117,4 +117,4 @@ if __name__ == "__main__":
                       help="IP of the server-side computer for streaming")
 
   args = parser.parse_args()
-  stream_out = ThreadedStream(args.udp_ip, only_cam=args.cam, only_imu=args.imu, only_dist=args.dist)
+  stream_out = ThreadedStream(args.udp_ip)
