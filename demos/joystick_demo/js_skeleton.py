@@ -13,7 +13,7 @@ b = Blimp(port, my_ip, pi_ip, logger=True)
 js = JoyStick_helper()
 
 # desired altitude holding
-z_des = 0.95
+des_z = 1.
 
 # joystick data for data saving
 ctrl_u = []
@@ -57,8 +57,11 @@ for t in range(T):
             # update states from the pi
             b.poll_dist()
 
+            # ----- add code here -----
+            des_z = 0.95
+
             # commit altitude control
-            b.set_alt(z_des, positive_only=True)
+            b.set_alt(des_z, positive_only=True)
 
     else:
         # commit manual control

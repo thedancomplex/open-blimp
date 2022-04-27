@@ -3,19 +3,12 @@ channels:
 - menpo
 - defaults
 dependencies:
-- jupyter
-- matplotlib
 - python=3.6
-- scikit-learn
 - scipy
-- opencv=3.4.2
-- conda-build
 - numpy
-- pandas
 - pyserial
-- vlfeat
+- opencv=3.4.2
 - pip
 - pip:
-  - visdom
   - pyyaml
   - pygame

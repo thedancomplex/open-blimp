@@ -1,7 +1,7 @@
 import time
 import numpy as np
 from pyBlimp.blimp import Blimp
-import utils.ir_filtering
+from utils.ir_filtering import find_ir_relative_position
 
 # set serial port 
 port = "/dev/ttyUSB0"
@@ -25,7 +25,7 @@ for t in range(T):
 
         # update desired state based on camera image
         # - des_pos should be a numpy array (size 3)
-        ir_pos = ir_filtering.relative_position(b.I)
+        ir_pos = find_ir_relative_position(b.I)
         
         x = b.get_state()
         [_, _, yw] = b.quat_to_eul(x[6:10])

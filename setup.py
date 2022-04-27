@@ -11,5 +11,5 @@ setup(
     packages = find_packages('src'),
     package_dir = {'': 'src'},
     description = 'OpenBlimp Code and Workshop Demos',
-    install_requires = ['numpy', 'pandas', 'pygame', 'opencv-python', 'pyserial', 'scipy']
+    install_requires = []
 )
