@@ -1,0 +1,21 @@
+name: openBlimp
+channels:
+- menpo
+- defaults
+dependencies:
+- jupyter
+- matplotlib
+- python=3.6
+- scikit-learn
+- scipy
+- opencv3=3.4.2
+- numpy
+- pandas
+- pyserial
+- vlfeat
+- pip
+- pip:
+  - visdom
+  - pyyaml
+  - pygame
+- yaml

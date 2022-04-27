@@ -1,0 +1,21 @@
+name: openBlimp
+channels:
+- defaults
+- conda-forge
+dependencies:
+- jupyter
+- matplotlib
+- python=3.6
+- scikit-learn
+- scipy
+- numpy
+- pandas
+- pyserial
+- opencv=3.4.2
+- vlfeat
+- pip
+- pip:
+  - visdom
+  - pyyaml
+  - pygame
+- yaml
