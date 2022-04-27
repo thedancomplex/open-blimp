@@ -4,10 +4,10 @@ import serial
 import struct
 import numpy as np
 from numpy import pi
-from utils.pid import PID
-from utils.mixer import *
+from pyBlimp.pid import PID
+from pyBlimp.mixer import *
 from scipy.spatial.transform import Rotation as R
-from utils.pi_zero_w_streaming.stream_rcv import ThreadedPiStream
+from pi_zero_w_streaming.stream_rcv import ThreadedPiStream
 
 class Blimp:
     def __init__(self, port, pi_ports=[8485, 8486, 8487], logger=True):

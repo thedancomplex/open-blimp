@@ -8,7 +8,8 @@ dependencies:
 - python=3.6
 - scikit-learn
 - scipy
-- opencv3=3.4.2
+- opencv=3.4.2
+- conda-build
 - numpy
 - pandas
 - pyserial
@@ -18,4 +19,3 @@ dependencies:
   - visdom
   - pyyaml
   - pygame
-- yaml

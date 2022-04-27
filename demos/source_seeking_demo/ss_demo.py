@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from utils.blimp import Blimp
+from pyBlimp.blimp import Blimp
 import utils.ir_filtering
 
 # set serial port 

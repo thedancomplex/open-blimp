@@ -1,13 +1,13 @@
 import time
 import numpy as np
-from utils.blimp import Blimp
+from pyBlimp.blimp import Blimp
 import utils.ir_filtering
 
 # set serial port 
 port = ""
 
 # build the blimp object
-b = Blimp(port, my_ip, pi_ip, logger=True)
+b = Blimp(port, logger=True)
 
 # desired hovering altitude
 z_des = 1.0
@@ -36,8 +36,8 @@ for t in range(T):
         # commit altitude control        
         b.set_alt(z_des, positive_only=True)
   
-  # send command and sleep a bit
-  b.step()
-  time.sleep(0.05)
+    # send command and sleep a bit
+    b.step()
+    time.sleep(0.05)
 
 b.save("data")
