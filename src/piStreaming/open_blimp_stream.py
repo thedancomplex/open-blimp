@@ -113,8 +113,8 @@ class ThreadedStream:
 # setup streamer
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
-  parser.add_argument('--dest_ip', dest='udp_ip', default="localhost",
+  parser.add_argument('--udp_ip', dest='udp_ip', default="localhost",
                       help="IP of the server-side computer for streaming")
 
   args = parser.parse_args()
-  stream_out = ThreadedStream(udp_ip, only_cam=args.cam, only_imu=args.imu, only_dist=args.dist)
+  stream_out = ThreadedStream(args.udp_ip, only_cam=args.cam, only_imu=args.imu, only_dist=args.dist)
