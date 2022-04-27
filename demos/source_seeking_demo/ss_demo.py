@@ -4,7 +4,7 @@ from pyBlimp.blimp import Blimp
 from utils.ir_filtering import find_ir_relative_position
 
 # set serial port 
-port = "/dev/ttyUSB0"
+port = "COM3"
 
 # build the blimp object
 b = Blimp(port, logger=True)
