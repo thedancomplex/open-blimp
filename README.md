@@ -7,14 +7,22 @@ To view documentation and tutorials on running the demos, visit TBD-site
   Before running the demos, setup the miniconda environment (refer to TBD-site)
   
   To run the joystick demo navigate to
-  ## open-blimp/src/blimp_python_package ##
+  ```
+  open-blimp/src/blimp_python_package
+  ```
   
   and run:
-  ## python js_demo.py ##
+  ```
+  python js_demo.py
+  ```
   
   To run the source-seeking demo navigate to
-  ## open-blimp/src/blimp_python_package ##
+  ```
+  open-blimp/src/blimp_python_package
+  ```
   
   and run:
-  ## python ss_demo.py ##
+  ```
+  python ss_demo.py
+  ```
   
