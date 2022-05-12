@@ -7,7 +7,7 @@ from utils.js_utils import JoyStick_helper
 port = ""
 
 # build the blimp object
-b = Blimp(port, my_ip, pi_ip, logger=True)
+b = Blimp(port, logger=True)
 
 # setup the joystick reader
 js = JoyStick_helper()
