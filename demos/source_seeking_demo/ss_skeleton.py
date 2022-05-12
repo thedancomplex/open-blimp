@@ -14,7 +14,7 @@ des_vy = 0.
 des_yw = 0.
 
 # desired hovering altitude
-z_des = 1.0
+des_z = 1.0
 
 T = 800
 for t in range(T):
@@ -56,7 +56,7 @@ for t in range(T):
         b.poll_dist()
 
         # commit altitude control        
-        b.set_alt(z_des, positive_only=True)
+        b.set_alt(des_z, positive_only=True)
   
     # send command and sleep a bit
     b.step()
