@@ -173,8 +173,8 @@ class Blimp:
 
         # prioritize vertical thrust
         updown_abs = abs(self.u[2])
-        if updown_abs > 0.7:
-            self.u *= 0.7
+        if updown_abs > 0.5:
+            self.u *= 0.5
             self.u[2] = updown_abs
             
         # mix commands to get motor inputs
