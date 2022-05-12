@@ -169,14 +169,22 @@ class Blimp:
 
     def step(self, cmd=None):
         if cmd is not None:
-            self.u = cmd
+            self.u[0] = cmd[0]
+            self.u[1] = cmd[1]
+            self.u[2] = cmd[2]
+            self.u[3] = 0.
+            self.u[4] = 0.
+            self.u[5] = cmd[3]
 
         # prioritize vertical thrust
         updown_abs = abs(self.u[2])
         if updown_abs > 0.5:
             self.u *= 0.5
-            self.u[2] = updown_abs
             
+        # clip extraneous input
+        self.u = np.clip(self.u, -0.8, 0.8)
+        self.u[2] = updown_abs
+        
         # mix commands to get motor inputs
         tau = actuation_vector_saturation(self.u)
         f = mixer_positive(tau)
