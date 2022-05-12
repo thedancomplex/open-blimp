@@ -22,21 +22,24 @@ ctrl_u = []
 T = 2500
 for t in range(T):
     # handle the joystick
-    ax, toggle_state = js.get_state()
+    ax, button_event, toggle_state = js.get_state()
 
     # toggle the autopilot
-    if toggle_state: 
+    if button_event and toggle_state: 
         b.zero_z_rot()
         print("Autopilot: ON")
 
-    else:
+    elif button_event and not toggle_state:
         print("Autopilot: OFF")
+
+    # store joystick input for post-processing
+    ctrl_u.append(np.array(ax))
       
     # store joystick input for post-processing
     ctrl_u.append(np.array(ax))
     
     cmd = None
-    if control_on:
+    if toggle_state:
         if b.pi.bno_new:
             # update states from the pi
             b.poll_bno()
