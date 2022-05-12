@@ -62,10 +62,11 @@ for t in range(T):
         if b.pi.dist_new:
             # update states from the pi
             b.poll_dist()
-
+            
+            des_z = b.x[2] # do nothing
             # ----- add code here ----- #
             
-            des_z = 0.95
+            
 
             # ----- end code addition ----- #
             
