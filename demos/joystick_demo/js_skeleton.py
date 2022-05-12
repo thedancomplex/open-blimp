@@ -41,10 +41,13 @@ for t in range(T):
             # update states from the pi
             b.poll_bno()
 
-            # ----- add code here -----  
+            # ----- add code here ----- # 
+            
             des_vx = 0.
             des_vy = 0.
             des_yw = 0.
+            
+            # ----- end code addition ----- #
             
             # wraps the angle of the desired yaw
             des_yw += 2*np.pi*(des_yw < -np.pi) - 2*np.pi*(des_yw > np.pi)
@@ -57,9 +60,12 @@ for t in range(T):
             # update states from the pi
             b.poll_dist()
 
-            # ----- add code here -----
+            # ----- add code here ----- #
+            
             des_z = 0.95
 
+            # ----- end code addition ----- #
+            
             # commit altitude control
             b.set_alt(des_z, positive_only=True)
 
