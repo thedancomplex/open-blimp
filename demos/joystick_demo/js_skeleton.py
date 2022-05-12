@@ -71,7 +71,7 @@ for t in range(T):
 
     else:
         # commit manual control
-        cmd = np.array([-ax[1], ax[0], ax[3], 0.0, 0.0, ax[2]])
+        cmd = 0.14*np.array([-ax[1], ax[0], ax[3], 0.0, 0.0, ax[2]])
 
     # send the command
     b.step(cmd)
