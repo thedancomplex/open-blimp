@@ -171,6 +171,12 @@ class Blimp:
         if cmd is not None:
             self.u = cmd
 
+        # prioritize vertical thrust
+        updown_abs = abs(self.u[2])
+        if updown_abs > 0.7:
+            self.u *= 0.7
+            self.u[2] = updown_abs
+            
         # mix commands to get motor inputs
         tau = actuation_vector_saturation(self.u)
         f = mixer_positive(tau)
