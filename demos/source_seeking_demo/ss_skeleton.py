@@ -9,6 +9,10 @@ port = ""
 # build the blimp object
 b = Blimp(port, logger=True)
 
+des_vx = 0.
+des_vy = 0.
+des_yw = 0.
+
 # desired hovering altitude
 z_des = 1.0
 
@@ -21,13 +25,31 @@ for t in range(T):
         # extract location of target from image
         ir_pos = ir_filtering.relative_position(b.I)
 
-        # ---- add code here ---- #
+        x = b.get_state()
+        [_, _, yw] = b.quat_to_eul(x[6:10])
         
+        if ir_pos is not None:
+            # ---- add code here ---- #
+            
+            des_vx = 0.
+            des_vy = 0.
+            des_yw = 0.
+        
+            # ---- end code addition ---- #
+
     if b.pi.bno_new:
         # update states from the pi
         b.poll_bno()
 
-        # ---- add code here ---- #
+        # get heading
+        x = b.get_state()
+        [_, _, yw] = b.quat_to_eul(x[6:10])
+        
+        # commit velocity control  
+        b.set_vel([-des_vy, -des_vx])
+
+        # commit heading control
+        b.set_heading(des_yw)
         
     if b.pi.dist_new:
         # update states from the pi
