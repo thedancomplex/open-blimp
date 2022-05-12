@@ -153,7 +153,7 @@ class Blimp:
         [_, _, yw] = self.quat_to_eul(self.x[6:10])
 
         # adjust to 0-settings
-        #yw -= self.rot0[2]
+        yw -= self.rot0[2]
         vyw = self.x[12]
         
         # - inputs        
