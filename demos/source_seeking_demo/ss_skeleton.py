@@ -9,9 +9,9 @@ port = "xxx"
 # build the blimp object
 b = Blimp(port, logger=True)
 
-des_vx = 0.
-des_vy = 0.
-des_yw = 0.
+des_vx = 0. # desired forward velocity
+des_vy = 0. # desired sideway veloctiy
+des_yw = 0. # desired heading angle
 
 # desired hovering altitude
 des_z = 1.0
