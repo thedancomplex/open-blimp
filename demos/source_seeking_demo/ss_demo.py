@@ -13,7 +13,7 @@ des_vx = 0.
 des_vy = 0.
 des_yw = 0.
 
-z_des = 1.0
+des_z = 1.0
 target_des = 0.9
 control_on = False
 
@@ -59,7 +59,7 @@ for t in range(T):
         b.poll_dist()
 
         # commit altitude control        
-        b.set_alt(z_des, positive_only=True)
+        b.set_alt(des_z, positive_only=True)
         
     b.step()
 
