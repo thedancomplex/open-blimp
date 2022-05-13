@@ -4,7 +4,7 @@ from pyBlimp.blimp import Blimp
 import utils.ir_filtering
 
 # set serial port 
-port = ""
+port = "xxx"
 
 # build the blimp object
 b = Blimp(port, logger=True)
