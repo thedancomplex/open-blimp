@@ -73,7 +73,12 @@ for t in range(T):
     else:
         # commit manual control
         cmd = np.array([0., 0., 0., 0.])
+        # ----- add code here ----- #
+            
+            
 
+        # ----- end code addition ----- #
+            
     # send the command
     b.step(cmd)
     time.sleep(0.05)
