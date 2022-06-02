@@ -34,9 +34,6 @@ for t in range(T):
 
     # store joystick input for post-processing
     ctrl_u.append(np.array(ax))
-      
-    # store joystick input for post-processing
-    ctrl_u.append(np.array(ax))
     
     cmd = None
     if toggle_state:
