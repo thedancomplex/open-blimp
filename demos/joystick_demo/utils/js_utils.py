@@ -24,12 +24,12 @@ class JoyStick_helper:
         
         # get debounced button value
         button_event = False
-        if self.js.get_button(0) and not self.button_state: 
+        if self.js.get_button(3) and not self.button_state: 
             self.button_state = True
             self.toggle_state = not self.toggle_state
             button_event = True
           
-        elif not self.js.get_button(0) and self.button_state:
+        elif not self.js.get_button(3) and self.button_state:
             self.button_state = False
 
         return [llr, lud, rlr, rud], button_event, self.toggle_state
