@@ -177,14 +177,14 @@ class Blimp:
             self.u[5] = cmd[3]
 
         # prioritize vertical thrust
-        updown_abs = abs(self.u[2])
-        if updown_abs > 0.5:
-            self.u *= 0.5
+        updown_abs = self.u[2]
+        if abs(updown_abs) > 0.1:
+            self.u *= 0.3
             
         # clip extraneous input
-        self.u = np.clip(self.u, -0.8, 0.8)
         self.u[2] = updown_abs
-        
+        self.u = np.clip(self.u, -0.8, 0.8)
+
         # mix commands to get motor inputs
         tau = actuation_vector_saturation(self.u)
         f = mixer_positive(tau)
