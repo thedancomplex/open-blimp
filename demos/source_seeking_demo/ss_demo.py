@@ -37,7 +37,7 @@ for t in range(T):
               des_vx = target_des - ir_pos[2]
               
           # align yaw towards the target              
-          des_yw = yw - ir_pos[0]            
+          des_yw = -ir_pos[0]            
           print("Emitter seen")
           
     if b.pi.bno_new:
