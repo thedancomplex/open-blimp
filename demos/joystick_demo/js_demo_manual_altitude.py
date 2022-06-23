@@ -54,12 +54,8 @@ for t in range(T):
             b.set_vel([des_vy, des_vx])
             b.set_heading(des_yw)
 
-            # set manual altitude control
-            b.x[2] = 0.0
-
             # commit altitude control
-            des_z = 0.2*ax[3]
-            des_z = min(max(des_z, 0.3), -0.3)
+            des_z = b.x[2] - 0.2*ax[3]
             b.set_alt(des_z, positive_only=False)
 
     else:
