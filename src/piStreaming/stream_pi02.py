@@ -70,11 +70,11 @@ class MultiStream:
         cam.exposure_mode = "sports"
         print("Camera successfully registered")
 
-        # setup the socket
-        sock = socket.socket()
-
         while True:
             try:
+                # setup the socket
+                sock = socket.socket()
+
                 # connect to the server
                 connected = False
                 while not connected:
