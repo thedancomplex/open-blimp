@@ -1,13 +1,9 @@
 #!/usr/bin/env/python3
 # default python libraries
-import argparse
 import multiprocessing as mp
 import socket
 import struct
-import signal
-import sys
 import time
-
 
 class MultiStream:
     def __init__(self, udp_ip, udp_ports=(8485, 8486, 8487)):
@@ -20,105 +16,96 @@ class MultiStream:
         self.dist_port = udp_ports[2]
         self.t0 = time.time()
 
-        self.cam_running = False
-        self.bno_running = False
-        self.vl53_running = False
-
         # store camera params
-        self.res = (640, 480)
+        self.res = (360, 240)
         self.fps = 20
-        self.shutter_speed = 20
-        self.quality = 20
+        self.quality = 15
+
+        # setup the processes
+        self.pcam = mp.Process(target=self.handle_cam_write, args=())
+        self.pbno = mp.Process(target=self.handle_bno_write, args=())
+        self.pdist = mp.Process(target=self.handle_dist_write, args=())
 
     def __exit__(self):
-        print("Cleaning up...")
         self.stop()
 
     def run(self):
         # start the camera process
-        if not self.cam_running:
-            self.pcam = mp.Process(target=self.handle_cam_write, args=())
+        if not self.pcam.is_alive():
             self.pcam.start()
-            self.cam_running = True
 
         # start the BNO process
-        if not self.bno_running:
-            self.pbno = mp.Process(target=self.handle_bno_write, args=())
+        if not self.pbno.is_alive():
             self.pbno.start()
-            self.bno_running = True
 
         # start the IR laser process
-        if not self.vl53_running:
-            self.pdist = mp.Process(target=self.handle_dist_write, args=())
+        if not self.pdist.is_alive():
             self.pdist.start()
-            self.vl53_running = True
 
     def stop(self):
         # stop the camera process
         if self.cam_running:
             self.pcam.terminate()
             self.pcam.join()
-            self.cam_running = False
 
         # stop the BNO process
         if self.bno_running:
             self.pbno.terminate()
             self.pbno.join()
-            self.bno_running = False
 
         # stop the IR laser process
         if self.vl53_running:
             self.pdist.terminate()
             self.pdist.join()
-            self.dist_running = False
 
     def handle_cam_write(self):
-        try:
-            # import necessary libs
-            from picamera import PiCamera
-            from io import BytesIO
+        #import necessary libs
+        from picamera import PiCamera
+        from io import BytesIO
 
-            # setup the socket
-            sock = socket.socket()
+        # setup the camera
+        cam = PiCamera()
+        cam.resolution = self.res
+        cam.framerate = self.fps
+        cam.exposure_mode = "sports"
+        print("Camera successfully registered")
 
-            connected = False
-            while not connected:
-                try:
-                    sock.connect((self.udp_ip, self.cam_port))
-                    connected = True
+        # setup the socket
+        sock = socket.socket()
 
-                except Exception as e:
-                    print("Camera server still trying to connect...")
-                    time.sleep(1)
+        while True:
+            try:
+                # connect to the server
+                connected = False
+                while not connected:
+                    try:
+                        sock.connect((self.udp_ip, self.cam_port))
+                        connected = True
 
-            self.cam_connection = sock.makefile('wb')
+                    except Exception as e:
+                        time.sleep(0.1)
 
-            # setup the camera
-            cam = PiCamera()
-            cam.resolution = self.res
-            cam.framerate = self.fps
-            cam.shutter_speed = self.shutter_speed
-            print("Camera successfully registered")
+                print("Camera server connected!")
+                self.cam_connection = sock.makefile('wb')
 
-            # start the camera stream
-            buf = BytesIO()
-            for frame in cam.capture_continuous(buf, format="jpeg", quality=self.quality, use_video_port=True):
-                # write the length of the capture
-                buf_len = struct.pack('<L', buf.tell())
-                self.cam_connection.write(buf_len)
-                self.cam_connection.flush()
+                # start the camera stream
+                buf = BytesIO()
+                for frame in cam.capture_continuous(buf, format="jpeg", quality=self.quality, use_video_port=True):
+                    # write the length of the capture
+                    buf_len = struct.pack('<L', buf.tell())
+                    self.cam_connection.write(buf_len)
+                    self.cam_connection.flush()
 
-                # write the image data
-                buf.seek(0)
-                self.cam_connection.write(buf.read())
+                    # write the image data
+                    buf.seek(0)
+                    self.cam_connection.write(buf.read())
 
-                # delete buffer
-                buf.seek(0)
-                buf.truncate()
+                    # delete buffer
+                    buf.seek(0)
+                    buf.truncate()
 
-        except Exception as e:
-            print("Camera failed: ", e)
-            self.cam_running = False
+            except Exception as e:
+                print("Camera server disconnected!")
 
     def handle_bno_write(self):
         try:
@@ -146,7 +133,6 @@ class MultiStream:
 
         except Exception as e:
             print("BNO failed: ", e)
-            self.bno_running = False
 
     def handle_dist_write(self):
         try:
@@ -178,10 +164,13 @@ class MultiStream:
 
         except Exception as e:
             print("VL53 failed: ", e)
-            self.vl53_running = False
 
 # setup streamer
 if __name__ == "__main__":
+    import argparse
+    import signal
+    import sys
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--udp_ip', dest='udp_ip', default="localhost",
                         help="IP of the server-side computer for streaming")
@@ -196,22 +185,3 @@ if __name__ == "__main__":
         sys.exit(0)
 
     signal.signal(signal.SIGINT, handler)
-
-    # check for sensor failures
-    while S.cam_running or S.bno_running or S.vl53_running:
-        time.sleep(0.5)
-        if S.pcam.is_alive() and not S.cam_running:
-            stream_out.pcam.terminate()
-            stream_out.pcam.join()
-            # try to restart the camera process
-            s.run()
-
-        if S.pbno.is_alive() and not S.bno_running:
-            stream_out.pbno.terminate()
-            stream_out.pbno.join()
-            print("BNO055 process ended")
-
-        if S.pdist.is_alive() and not S.vl53_running:
-            stream_out.pdist.terminate()
-            stream_out.pdist.join()
-            print("VL53L1X process ended")
