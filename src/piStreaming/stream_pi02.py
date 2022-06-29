@@ -25,10 +25,10 @@ class MultiStream:
         self.vl53_running = False
 
         # store camera params
-        self.res = (128, 128)
+        self.res = (640, 480)
         self.fps = 20
-        self.shutter_speed = 100
-        self.quality = 10
+        self.shutter_speed = 20
+        self.quality = 20
 
     def __exit__(self):
         print("Cleaning up...")
@@ -187,8 +187,8 @@ if __name__ == "__main__":
                         help="IP of the server-side computer for streaming")
 
     args = parser.parse_args()
-    stream_out = MultiStream(args.udp_ip)
-    stream_out.run()
+    S = MultiStream(args.udp_ip)
+    S.run()
 
     # end all subprocesses if ctrl-C is caught
     def handler(signum, frame):
@@ -198,24 +198,20 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, handler)
 
     # check for sensor failures
-    while True:
+    while S.cam_running or S.bno_running or S.vl53_running:
         time.sleep(0.5)
-        if not stream_out.cam_running:
+        if S.pcam.is_alive() and not S.cam_running:
             stream_out.pcam.terminate()
             stream_out.pcam.join()
-            print("Camera process ended")
+            # try to restart the camera process
+            s.run()
 
-        if not stream_out.bno_running:
+        if S.pbno.is_alive() and not S.bno_running:
             stream_out.pbno.terminate()
             stream_out.pbno.join()
             print("BNO055 process ended")
 
-        if not stream_out.vl53_running:
+        if S.pdist.is_alive() and not S.vl53_running:
             stream_out.pdist.terminate()
             stream_out.pdist.join()
             print("VL53L1X process ended")
-
-        if not stream_out.cam_running and \
-           not stream_out.bno_running and \
-           not stream_out.vl53_running:
-               break
