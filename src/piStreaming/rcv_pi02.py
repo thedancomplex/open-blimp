@@ -83,7 +83,7 @@ class MultiRcv:
         assert hasattr(self, 'bno_thread'), "BNO thread not initialized"
 
         self.bno_new = False
-        return self.bno_stamp, (self.quat, self.gyro)
+        return self.bno_stamp, (self.quat, self.gyro, self.acc)
 
     def get_dist(self):
         #check if distance thread is active
@@ -97,7 +97,7 @@ class MultiRcv:
         sz = 32
         thz = np.zeros(sz)
         idz = 0
-        while self.main_thread.isAlive():
+        while self.main_thread.is_alive():
             image_len = struct.unpack('<L', self.cam_connection.read(struct.calcsize('<L')))[0]
 
             image_stream = io.BytesIO()
@@ -127,7 +127,7 @@ class MultiRcv:
         sz = 32
         thz = np.zeros(sz)
         idz = 0
-        while self.main_thread.isAlive():
+        while self.main_thread.is_alive():
             data, addr = self.bno_sock.recvfrom(100)
             if data:
                 bno = struct.unpack("<10d", data)
@@ -151,7 +151,7 @@ class MultiRcv:
         sz = 32
         thz = np.zeros(sz)
         idz = 0
-        while self.main_thread.isAlive():
+        while self.main_thread.is_alive():
             data, addr = self.dist_sock.recvfrom(100)
 
             if data:
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     # setup the UDP receiver to receive images over port 8485 and BNO over port 8486
-    pi_ = MultiRcv(8485, 8486, 8487, debug=False)
+    pi_ = MultiRcv(8485, 8486, 8487, debug=True)
 
     # constantly query for newly received data
     t0 = 3*[time.time()]
@@ -184,28 +184,33 @@ if __name__ == "__main__":
     fig, ax = plt.subplots(1,1)
     while True:
         # query image
-        if pi_.cam_new:
-            img_stamp, img = pi_.get_image()
-
+        if pi_.cam_new and not pi_.debug:
+            _, img = pi_.get_image()
             ax.clear()
             ax.imshow(img)
             plt.draw(); plt.pause(0.001)
 
         # query imu
-        if pi_.bno_new:
-            bno_stamp, bno = pi_.get_bno()
+        if pi_.bno_new and not pi_.debug:
+            _, bno = pi_.get_bno()
             print("Quat:", bno[0])
 
         # query distance
-        if pi_.dist_new:
-            dist_stamp, dist = pi_.get_dist()
-            print("Distance:", dist, "m")
+        if pi_.dist_new and not pi_.debug:
+            _, dist = pi_.get_dist()
+            print("Dist:", dist)
 
-        # debug statements
+
+        # output/debug statements
         if pi_.debug:
             print(" ---- DEBUG ---- ")
-            print("Cam Hz:", pi_.cam_hz[-1])
-            print("BNO Hz:", pi_.bno_hz[-1])
-            print("VL53 Hz:", pi_.dist_hz[-1])
+            if pi_.cam_at_least_one: 
+                print("Cam Hz:", pi_.cam_hz[-1])
 
-    time.sleep(0.1)
+            if pi_.bno_at_least_one:
+                print("BNO Hz:", pi_.bno_hz[-1])
+
+            if pi_.dist_at_least_one:
+                print("VL53 Hz:", pi_.dist_hz[-1])
+
+        time.sleep(0.1)
