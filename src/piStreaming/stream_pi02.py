@@ -145,7 +145,7 @@ class MultiStream:
             i2c = board.I2C()
             vl53 = adafruit_vl53l1x.VL53L1X(i2c)
             vl53.distance_mode = 2
-            vl53.timing_budget = 500
+            vl53.timing_budget = 50
             vl53.start_ranging()
             print("VL53L1X successfully registered")
 
