@@ -196,7 +196,7 @@ if __name__ == "__main__":
         # query imu
         if pi_.bno_new and not pi_.debug:
             _, bno = pi_.get_bno()
-            print("Quat:", bno[0])
+            #print("Quat:", bno[0])
 
         # query distance
         if pi_.dist_new and not pi_.debug:
@@ -215,5 +215,3 @@ if __name__ == "__main__":
 
             if pi_.dist_at_least_one:
                 print("VL53 Hz:", pi_.dist_hz[-1])
-
-        time.sleep(0.1)

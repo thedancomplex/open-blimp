@@ -9,7 +9,6 @@ class MultiStream:
     def __init__(self, udp_ip, udp_ports=(8485, 8486, 8487)):
         # setup UDP socket
         print("Streaming to", udp_ip)
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_ip = udp_ip
         self.cam_port = udp_ports[0]
         self.bno_port = udp_ports[1]
