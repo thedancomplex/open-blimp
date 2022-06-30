@@ -13,12 +13,11 @@ class MultiStream:
         self.cam_port = udp_ports[0]
         self.bno_port = udp_ports[1]
         self.dist_port = udp_ports[2]
-        self.t0 = time.time()
 
         # store camera params
         self.res = (360, 240)
         self.fps = 20
-        self.quality = 15
+        self.quality = 10
 
         # setup the processes
         self.pcam = mp.Process(target=self.handle_cam_write, args=())
@@ -89,6 +88,7 @@ class MultiStream:
 
                 # start the camera stream
                 buf = BytesIO()
+                t0 = time.time()
                 for frame in cam.capture_continuous(buf, format="jpeg", quality=self.quality, use_video_port=True):
                     # write the length of the capture
                     buf_len = struct.pack('<L', buf.tell())
@@ -158,8 +158,6 @@ class MultiStream:
                         dist_packet = (distance,)
                         dist_bytes = struct.pack("<1d", *dist_packet)
                         sock.sendto(dist_bytes, (self.udp_ip, self.dist_port))
-
-                time.sleep(0.05)
 
         except Exception as e:
             print("VL53 failed: ", e)
