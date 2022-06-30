@@ -145,7 +145,7 @@ class MultiStream:
             i2c = board.I2C()
             vl53 = adafruit_vl53l1x.VL53L1X(i2c)
             vl53.distance_mode = 2
-            vl53.timing_budget = 100
+            vl53.timing_budget = 500
             vl53.start_ranging()
             print("VL53L1X successfully registered")
 
@@ -155,10 +155,12 @@ class MultiStream:
                     distance = vl53.distance
                     vl53.clear_interrupt()
 
-                    dist_packet = (distance,)
-                    dist_bytes = struct.pack("<1d", *dist_packet)
-                    sock.sendto(dist_bytes, (self.udp_ip, self.dist_port))
-                    time.sleep(0.05)
+                    if distance is not None:
+                        dist_packet = (distance,)
+                        dist_bytes = struct.pack("<1d", *dist_packet)
+                        sock.sendto(dist_bytes, (self.udp_ip, self.dist_port))
+
+                time.sleep(0.05)
 
         except Exception as e:
             print("VL53 failed: ", e)
