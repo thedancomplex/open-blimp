@@ -107,7 +107,7 @@ class MultiRcv:
             # parse image
             nparr = np.frombuffer(image_stream.read(), np.uint8)
             imgBGR = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            self.img = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
+            self.img = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)/255.
 
             # set timestamp
             self.cam_stamp = time.time()
@@ -185,8 +185,8 @@ if __name__ == "__main__":
     while True:
         # query image
         if pi_.cam_new:
-            img_stamp, image = pi_.get_image()
-            img = image/255.
+            img_stamp, img = pi_.get_image()
+
             ax.clear()
             ax.imshow(img)
             plt.draw(); plt.pause(0.001)
@@ -199,6 +199,13 @@ if __name__ == "__main__":
         # query distance
         if pi_.dist_new:
             dist_stamp, dist = pi_.get_dist()
-            #print("Distance:", dist, "m")
+            print("Distance:", dist, "m")
+
+        # debug statements
+        if pi_.debug:
+            print(" ---- DEBUG ---- ")
+            print("Cam Hz:", pi_.cam_hz[-1])
+            print("BNO Hz:", pi_.bno_hz[-1])
+            print("VL53 Hz:", pi_.dist_hz[-1])
 
     time.sleep(0.1)
