@@ -30,7 +30,10 @@ class MultiRcv:
         self.cam_hz = []
         self.bno_hz = []
         self.dist_hz = []
-
+        self.cam_at_least_one = False
+        self.bno_at_least_one = False
+        self.dist_at_least_one = False
+        
         # thread-check
         self.main_thread = threading.currentThread()
 
@@ -90,7 +93,7 @@ class MultiRcv:
         assert hasattr(self, 'dist_thread'), "Distance thread not initialized"
 
         self.dist_new = False
-        return self.dist_stamp, self.distance
+        return self.dist_stamp, self.distance/100.
 
     def handle_cam_read(self):
         t0 = time.time()
@@ -175,7 +178,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     # setup the UDP receiver to receive images over port 8485 and BNO over port 8486
-    pi_ = MultiRcv(8485, 8486, 8487, debug=True)
+    pi_ = MultiRcv(8485, 8486, 8487, debug=False)
 
     # constantly query for newly received data
     t0 = 3*[time.time()]
@@ -198,7 +201,7 @@ if __name__ == "__main__":
         # query distance
         if pi_.dist_new and not pi_.debug:
             _, dist = pi_.get_dist()
-            print("Dist:", dist)
+            print("Dist:", dist, "(m)")
 
 
         # output/debug statements
