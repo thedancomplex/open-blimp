@@ -40,7 +40,7 @@ class MultiRcv:
             self.cam_sock = socket.socket()
             self.cam_sock.bind(('0.0.0.0', cam_port))
             self.cam_sock.listen(0)
-      
+
             self.cam_connection = self.cam_sock.accept()[0].makefile('rb')
             self.cam_thread = threading.Thread(target=self.handle_cam_read, args=())
             self.cam_thread.start()
@@ -99,11 +99,11 @@ class MultiRcv:
         idz = 0
         while self.main_thread.isAlive():
             image_len = struct.unpack('<L', self.cam_connection.read(struct.calcsize('<L')))[0]
-      
+
             image_stream = io.BytesIO()
             image_stream.write(self.cam_connection.read(image_len))
             image_stream.seek(0)
-        
+
             # parse image
             nparr = np.frombuffer(image_stream.read(), np.uint8)
             imgBGR = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -130,9 +130,10 @@ class MultiRcv:
         while self.main_thread.isAlive():
             data, addr = self.bno_sock.recvfrom(100)
             if data:
-                bno = struct.unpack("<7d", data)
+                bno = struct.unpack("<10d", data)
                 self.quat = np.array(bno[0:4])
-                self.gyro = np.array(bno[4:])*np.pi/180
+                self.gyro = np.array(bno[4:7])*np.pi/180
+                self.acc  = np.array(bno[7:])
                 self.bno_stamp = time.time()
                 self.bno_new = True
                 self.bno_warn = False
@@ -179,7 +180,7 @@ if __name__ == "__main__":
     # constantly query for newly received data
     t0 = 3*[time.time()]
     hzh = 3*[np.zeros(32)]
-    
+
     fig, ax = plt.subplots(1,1)
     while True:
         # query image
@@ -189,7 +190,7 @@ if __name__ == "__main__":
             ax.clear()
             ax.imshow(img)
             plt.draw(); plt.pause(0.001)
-            
+
         # query imu
         if pi_.bno_new:
             bno_stamp, bno = pi_.get_bno()

@@ -110,23 +110,21 @@ class MultiStream:
     def handle_bno_write(self):
         try:
             # import necessary libs
-            import serial
-            import adafruit_bno055
+            from Adafruit_BNO055 import BNO055
 
             # setup the socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
             # setup the bno055
-            uart = serial.Serial("/dev/serial0", 115200, timeout=5)
-            sensor = adafruit_bno055.BNO055_UART(uart)
-            sensor.mode = 11
+            sensor = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
+            sensor.set_mode(8) # 8- IMU mode, 12 - NDOF mode
             print("BNO055 successfully registered")
 
             # start the bno055 stream
             while True:
-                quat = sensor.quaternion
-                gyro = sensor.gyro
-                acc  = sensor.acceleration
+                quat = sensor.read_quaternion()
+                gyro = sensor.read_gyroscope()
+                acc  = sensor.read_linear_acceleration()
                 bno_packet = quat + gyro + acc
                 bno_bytes = struct.pack("<10d", *bno_packet)
                 sock.sendto(bno_bytes, (self.udp_ip, self.bno_port))
