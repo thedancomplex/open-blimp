@@ -7,10 +7,11 @@ from numpy import pi
 from pyBlimp.pid import PID
 from pyBlimp.mixer import *
 from scipy.spatial.transform import Rotation as R
-from piStreaming.stream_rcv import ThreadedPiStream
+from piStreaming.rcv_pi02 import MultiRcv
 
 class Blimp:
-    def __init__(self, port, pi_ports=[8485, 8486, 8487], logger=True):
+    def __init__(self, id_num, port, pi_ports=[8485, 8486, 8487], logger=True):
+        self.id_num = id_num
         self.port = port
         self.logger = logger
   
@@ -57,7 +58,7 @@ class Blimp:
         self.u = np.zeros(6)
 
         # setup sensing tools
-        self.pi = ThreadedPiStream(pi_ports[0], pi_ports[1], pi_ports[2])
+        self.pi = MultiRcv(pi_ports[0], pi_ports[1], pi_ports[2])
 
         # set initial zeros
         self.rot0 = [0., 0., 0.]
@@ -186,12 +187,17 @@ class Blimp:
         self.u = np.clip(self.u, -0.8, 0.8)
 
         # mix commands to get motor inputs
-        tau = actuation_vector_saturation(self.u)
-        f = mixer_positive(tau)
-        duty_cycles = thrust2dutyCycle(f)
-        duty_cycles = duty_cycle_saturation(duty_cycles)
-        duty_cycles = direction_and_order_mapping(duty_cycles)
-        msg = convertCMD(duty_cycles)
+        duty_cycles = mix_inputs(self.u)
+        
+        # tau = actuation_vector_saturation(self.u)
+        # f = mixer_positive(tau)
+        # duty_cycles = thrust2dutyCycle(f)
+        # duty_cycles = duty_cycle_saturation(duty_cycles)
+        # duty_cycles = direction_and_order_mapping(duty_cycles)
+
+        # add unique ID to end
+        duty_and_id = np.append(duty_cycles, self.id_num)
+        msg = convertCMD(duty_and_id)
 
         msgb = b''
         for i in msg:

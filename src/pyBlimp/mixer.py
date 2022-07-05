@@ -2,6 +2,15 @@ import numpy as np
 import scipy as sp
 import scipy.interpolate
 
+def mix_inputs(u):
+    tau = actuation_vector_saturation(u)
+    f = mixer_positive(tau)
+    duty_cycles = thrust2dutyCycle(f)
+    duty_cycles = duty_cycle_saturation(duty_cycles)
+    duty_cycles = direction_and_order_mapping(duty_cycles)
+    
+    return duty_cycles
+
 def actuation_vector_saturation(user_tau):
     # diamond force constraint
     # function for constraining user/controller input force by force end loop
