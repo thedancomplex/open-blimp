@@ -171,6 +171,8 @@ class MultiStream:
                         dist_bytes = struct.pack("<2d", *dist_packet)
                         sock.sendto(dist_bytes, (self.udp_ip, self.dist_port))
 
+                time.sleep(0.02)
+
         except Exception as e:
             print("VL53 failed: ", e)
 
