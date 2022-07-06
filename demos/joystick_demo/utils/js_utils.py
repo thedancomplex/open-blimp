@@ -1,7 +1,11 @@
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+
 import pygame
 
 class JoyStick_helper:
     def __init__(self, js_id=0):
+
         pygame.display.init()
         pygame.joystick.init()
         self.js = pygame.joystick.Joystick(js_id)

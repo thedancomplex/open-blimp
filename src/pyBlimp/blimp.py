@@ -1,6 +1,7 @@
 import os
 import time
 import serial
+import signal
 import struct
 import numpy as np
 from numpy import pi
@@ -61,33 +62,30 @@ class Blimp:
             self.rot0 = [0., 0., 0.]
 
             time.sleep(0.5)
+            self.poll()
             self.zero_xy_rot()
             self.zero_z_rot()
 
-    def poll_image(self):
-        # call to update the state data
-        # - alternatively can be re-written to be done in the background
+    def poll(self):
+        # - call to update the state data
+        # get most recent image
         self.I_stamp, I = self.pi.get_image()
         if I is not None:
             self.I = I
-            
-    def poll_bno(self):
-        # call to update the state data
-        # - alternatively can be re-written to be done in the background
+
+        # get most recent bno
         self.x_stamp, bno = self.pi.get_bno()
         if bno is not None:
             self.x[6:10] = bno[0]
             self.x[10:] = bno[1]
 
-    def poll_dis(self):
-        # call to update the state data
-        # - alternatively can be re-written to be done in the background
+        # get most recent altitude
         self.z_stamp, z = self.pi.get_dis()
         if z is not None:                
             # correct distance using angle
             [r, p, yw] = self.euler()
             self.x[2] = z*np.cos(r)*np.cos(p)
-
+        
     def euler(self):
         [r, p, yw] = R.from_quat(self.x[6:10]).as_euler('xyz')
 
@@ -98,12 +96,10 @@ class Blimp:
         return -r, -p, yw
 
     def zero_xy_rot(self):
-        self.poll_bno()
         [r, p, _] = self.euler()
         self.rot0[:2] = [r, p]
         
     def zero_z_rot(self):
-        self.poll_bno()
         self.rot0[2] = self.euler()[2]
 
     def get_state(self):
@@ -187,19 +183,13 @@ class Blimp:
 
         # mix commands to get motor inputs
         duty_cycles = mix_inputs(self.u)
-        
-        # tau = actuation_vector_saturation(self.u)
-        # f = mixer_positive(tau)
-        # duty_cycles = thrust2dutyCycle(f)
-        # duty_cycles = duty_cycle_saturation(duty_cycles)
-        # duty_cycles = direction_and_order_mapping(duty_cycles)
 
         # add unique ID to end
         msg = convertCMD(duty_cycles, self.id_num)
 
         msgb = b''
-        for i in msg:
-            msgb += struct.pack('!B', int(i))
+        for val in msg:
+            msgb += struct.pack('!B', int(val))
 
         self.ser.write(msgb)
         

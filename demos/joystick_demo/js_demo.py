@@ -29,13 +29,24 @@ des_yw2 = 0.
 
 # show the active image
 fig, axes = plt.subplots(1,1)
+axes.set_xticks([])
+axes.set_yticks([])
 
 # state flags
 b1_first = False
 b2_first = False
 
+# setup exit on ctrl-c
+running = True
+def exit_handle(signum, frame):
+    global running
+    running = False
+    
+signal.signal(signal.SIGINT, exit_handle)
+
+
 # main loop
-while True:
+while running:
     # handle the joystick
     ax, b1_active, b2_active = js.get_state()
      
@@ -43,9 +54,9 @@ while True:
         if not b1_first:
             b1_first = True
             b1.zero_z_rot()
-            
+
         # update states from the pi
-        b1.poll_bno()
+        b1.poll()
 
         # commit velocity control  
         des_vx = -ax[1]
@@ -56,19 +67,17 @@ while True:
         b1.set_vel([des_vy, des_vx])
         b1.set_heading(des_yw1)
 
-        # update states from the pi
-        b1.poll_dis()
-
         # commit altitude control
         des_z1 += kg*ax[3]
         des_z1 = min(max(des_z1, 0.5), 2.0)
         b1.set_alt(des_z1, positive_only=True)
         
-        b1.poll_image()
+        # show image
         axes.clear()
         axes.imshow(b1.I)
         axes.set_title("Blimp 1 View")
-        plt.draw()
+        axes.set_xticks([])
+        axes.set_yticks([])
 
         b1.step()
 
@@ -79,7 +88,7 @@ while True:
             b2.zero_z_rot()
 
         # update states from the pi
-        b2.poll_bno()
+        b2.poll()
         [r, p, yw] = b2.euler()
         
         # commit velocity control  
@@ -91,27 +100,27 @@ while True:
         b2.set_vel([des_vy, des_vx])
         b2.set_heading(des_yw2)
 
-        # update states from the pi
-        b2.poll_dis()
-
         # commit altitude control
         des_z2 += kg*ax[3]
         des_z2 = min(max(des_z2, 0.5), 2.0)
         b2.set_alt(des_z2, positive_only=True)
 
-        b2.poll_image()
+        # show image
         axes.clear()
         axes.imshow(b2.I)
         axes.set_title("Blimp 2 View")
-        plt.draw()
+        axes.set_xticks([])
+        axes.set_yticks([])
 
         b2.step()
 
     else:        
-        if b1_first:
-            b1_first = False
-        
-        if b2_first:
-            b2_first = False
-        
-    plt.pause(0.01)
+        b1_first = False
+        b2_first = False
+
+    plt.draw()        
+    plt.pause(0.0001)
+
+# cleanup after the experiment is finished
+b1.pi.shutdown()
+b2.pi.shutdown()
