@@ -2,3 +2,4 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+demos/joystick_demo/utils/__pycache__/
