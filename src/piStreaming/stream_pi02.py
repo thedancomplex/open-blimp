@@ -84,20 +84,28 @@ class MultiStream:
                         time.sleep(0.1)
 
                 print("Camera server connected!")
-                self.cam_connection = sock.makefile('wb')
+                cam_connection = sock.makefile('wb')
 
                 # start the camera stream
                 buf = BytesIO()
                 t0 = time.time()
                 for frame in cam.capture_continuous(buf, format="jpeg", quality=self.quality, use_video_port=True):
+                    # get the current time
+                    tframe = time.time() - self.t0
+
                     # write the length of the capture
                     buf_len = struct.pack('<L', buf.tell())
-                    self.cam_connection.write(buf_len)
-                    self.cam_connection.flush()
+                    cam_connection.write(buf_len)
+                    cam_connection.flush()
 
                     # write the image data
                     buf.seek(0)
-                    self.cam_connection.write(buf.read())
+                    cam_connection.write(buf.read())
+                    cam_connection.flush()
+
+                    # write the current time
+                    tbuf = struct.pack('<d', tframe)
+                    cam_connection.write(tbuf)
 
                     # delete buffer
                     buf.seek(0)
@@ -124,8 +132,10 @@ class MultiStream:
                 quat = sensor.read_quaternion()
                 gyro = sensor.read_gyroscope()
                 acc  = sensor.read_linear_acceleration()
-                bno_packet = quat + gyro + acc
-                bno_bytes = struct.pack("<10d", *bno_packet)
+                tframe = time.time() - self.t0
+
+                bno_packet = quat + gyro + acc + (tframe,)
+                bno_bytes = struct.pack("<11d", *bno_packet)
                 sock.sendto(bno_bytes, (self.udp_ip, self.bno_port))
 
         except Exception as e:
@@ -144,7 +154,7 @@ class MultiStream:
             i2c = board.I2C()
             vl53 = adafruit_vl53l1x.VL53L1X(i2c)
             vl53.distance_mode = 2
-            vl53.timing_budget = 50
+            vl53.timing_budget = 100
             vl53.start_ranging()
             print("VL53L1X successfully registered")
 
@@ -155,8 +165,9 @@ class MultiStream:
                     vl53.clear_interrupt()
 
                     if distance is not None:
-                        dist_packet = (distance,)
-                        dist_bytes = struct.pack("<1d", *dist_packet)
+                        tframe = time.time() - self.t0
+                        dist_packet = (distance, tframe)
+                        dist_bytes = struct.pack("<2d", *dist_packet)
                         sock.sendto(dist_bytes, (self.udp_ip, self.dist_port))
 
         except Exception as e:
