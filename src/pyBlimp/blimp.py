@@ -19,9 +19,9 @@ class Blimp:
         self.ser = ser
 
         # construct lowest-level PID controllers
-        k_r = np.array([-0.17, 0.001, 2.13])
-        k_p = np.array([-0.17, 0.001, 2.11])
-        k_yw = np.array([0.005, 0.0, 0.15])
+        k_r = np.array([-0.12, 0.0, 0.0])
+        k_p = np.array([-0., 0.0, 0.0])
+        k_yw = np.array([0.00, 0.0, 0.0])
         self.pid_roll = PID(k_r, angle=True)
         self.pid_pitch = PID(k_p, angle=True)
         self.pid_yaw = PID(k_yw, angle=True)
@@ -55,7 +55,7 @@ class Blimp:
 
         if not motors_only:
             # setup sensing tools
-            self.pi = MultiRcv(pi_ports[0], pi_ports[1], pi_ports[2])
+            self.pi = MultiRcv(pi_ports)
 
             # set initial zeros
             self.rot0 = [0., 0., 0.]
@@ -79,17 +79,17 @@ class Blimp:
             self.x[6:10] = bno[0]
             self.x[10:] = bno[1]
 
-    def poll_dist(self):
+    def poll_dis(self):
         # call to update the state data
         # - alternatively can be re-written to be done in the background
-        self.z_stamp, z = self.pi.get_dist()
+        self.z_stamp, z = self.pi.get_dis()
         if z is not None:                
             # correct distance using angle
-            [r, p, yw] = self.quat_to_eul(self.x[6:10])
+            [r, p, yw] = self.euler()
             self.x[2] = z*np.cos(r)*np.cos(p)
 
-    def quat_to_eul(self, q):
-        [yw, p, r] = R.from_quat(q).as_euler('xyz')
+    def euler(self):
+        [r, p, yw] = R.from_quat(self.x[6:10]).as_euler('xyz')
 
         # transform to blimp coordinate system
         r += pi
@@ -99,12 +99,12 @@ class Blimp:
 
     def zero_xy_rot(self):
         self.poll_bno()
-        [r, p, _] = self.quat_to_eul(self.x[6:10])
+        [r, p, _] = self.euler()
         self.rot0[:2] = [r, p]
         
     def zero_z_rot(self):
         self.poll_bno()
-        self.rot0[2] = self.quat_to_eul(self.x[6:10])[2]
+        self.rot0[2] = self.euler()[2]
 
     def get_state(self):
         return self.x.copy()
@@ -130,7 +130,7 @@ class Blimp:
 
     def set_ang(self, ang=[0,0]):
         # compute the single loop angle control input
-        [r, p, _] = self.quat_to_eul(self.x[6:10])
+        [r, p, _] = self.euler()
 
         # adjust to 0-settings
         r -= self.rot0[0]
@@ -150,7 +150,7 @@ class Blimp:
 
     def set_heading(self, yw_des=0.):
         # compute the single loop angle control input for heading
-        [_, _, yw] = self.quat_to_eul(self.x[6:10])
+        [_, _, yw] = self.euler()
 
         # adjust to 0-settings
         yw -= self.rot0[2]
