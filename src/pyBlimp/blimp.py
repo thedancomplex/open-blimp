@@ -1,242 +1,178 @@
-import os
-import time
-import serial
-import signal
-import struct
+import multiprocessing as mp
 import numpy as np
-from numpy import pi
-from pyBlimp.pid import PID
-from pyBlimp.mixer import *
-from scipy.spatial.transform import Rotation as R
-from piStreaming.rcv_pi02 import MultiRcv
+import time
+
+from multiprocessing import shared_memory as sm
+from pyBlimp._controller import handle_controller
+from pyBlimp.utils import *
 
 class Blimp:
-    def __init__(self, id_num, port, ser, pi_ports=[8485, 8486, 8487], logger=True, motors_only=False):
-        self.id_num = id_num
-        self.port = port
-        self.logger = logger
-  
-        # store serial port
-        self.ser = ser
+    def __init__(self, id_num, ser, pi_ports=[8485, 8486, 8487], logger=False):
+        # define incoming image size
+        im_sz = (240, 360, 3)
 
-        # construct lowest-level PID controllers
-        k_r = np.array([-0.12, 0.0, 0.0])
-        k_p = np.array([-0., 0.0, 0.0])
-        k_yw = np.array([0.00, 0.0, 0.0])
-        self.pid_roll = PID(k_r, angle=True)
-        self.pid_pitch = PID(k_p, angle=True)
-        self.pid_yaw = PID(k_yw, angle=True)
+        # setup shared memory state (1-z, 4-quat, 3-euler, 3-linear accel)
+        self.lock_x = mp.Lock()
+        self.sh_x = sm.SharedMemory(create=True, size=88)
+        self.sh_x_stamp = sm.SharedMemory(create=True, size=8)
+        self.x = np.ndarray(11, dtype=np.double, buffer=self.sh_x.buf)
+        self.x_stamp = np.ndarray(1, np.double, buffer=self.sh_x_stamp.buf)
+        self.x[:] = [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0.]
+        self.x_stamp[0] = 0.        
 
-        # construct velocity PID controllers
-        k_vxy = np.array([0.5, 0., 0.])
-        self.pid_vx = PID(k_vxy, windup=1.0)
-        self.pid_vy = PID(k_vxy, windup=1.0)
+        # setup shared image access
+        self.lock_I = mp.Lock()
+        self.sh_img = sm.SharedMemory(create=True, size=np.prod(im_sz))        
+        self.sh_img_stamp = sm.SharedMemory(create=True, size=8)
+        self.img = np.ndarray(im_sz, dtype=np.uint8, buffer=self.sh_img.buf)
+        self.img_stamp = np.ndarray(1, np.double, buffer=self.sh_img_stamp.buf)
+        self.img[:,:,:] = 0
+        self.img_stamp[0] = 0.
 
-        # construct position PID controllers
-        k_pxy = np.array([0., 0., 0.])
-        k_pz = np.array([0.19, 0.001, 0.19])
-        self.pid_px = PID(k_pxy, windup=0.5)
-        self.pid_py = PID(k_pxy, windup=0.5)
-        self.pid_pz = PID(k_pz, windup=0.5)
+        # setup shared desired states (z, roll, pitch, yaw)
+        self.lock_des = mp.Lock()
+        self.sh_des = sm.SharedMemory(create=True, size=32)
+        self.des = np.ndarray(4, dtype=np.double, buffer=self.sh_des.buf)
+        self.des[:] = [0., 0., 0., 1.]
 
-        # setup logger information
-        self.x = np.zeros(13); self.x[9] = 1.
-        self.I = np.zeros((128,128,3))
-        self.x_stamp = None
-        self.z_stamp = None
-        self.I_stamp = None
-        if self.logger:
-            self.idx = 0
-            self.uh = []
-            self.xh = []
-            self.Ih = []
+        # setup shared rotation zeros
+        self.lock_rot0 = mp.Lock()
+        self.sh_rot0 = sm.SharedMemory(create=True, size=24)
+        self.rot0 = np.ndarray(3, dtype=np.double, buffer=self.sh_rot0.buf)
 
-        # setup input buffer to be sent out
-        self.u = np.zeros(6)
+        # setup shared manual mode and user interface
+        self.lock_cmd = mp.Lock()
+        self.sh_man = sm.SharedMemory(create=True, size=1)
+        self.man = np.ndarray(1, dtype=np.bool_, buffer=self.sh_man.buf)
+        self.sh_cmd = sm.SharedMemory(create=True, size=32)
+        self.cmd = np.ndarray(4, dtype=np.double, buffer=self.sh_cmd.buf)        
+        self.man[0] = False
+        self.cmd[:] = np.zeros(4)
 
-        if not motors_only:
-            # setup sensing tools
-            self.pi = MultiRcv(pi_ports)
+        # setup shared process flag
+        self.sh_run = sm.SharedMemory(create=True, size=1)
+        self.run = np.ndarray(1, dtype=np.bool_, buffer=self.sh_run.buf)
+        self.run[0] = True
 
-            # set initial zeros
-            self.rot0 = [0., 0., 0.]
+        # start the controller process
+        locks = (self.lock_x, self.lock_I, self.lock_des, self.lock_rot0, self.lock_cmd)
+             
+        names = (self.sh_x.name, self.sh_x_stamp.name, self.sh_img.name, 
+                 self.sh_img_stamp.name, self.sh_des.name, self.sh_rot0.name,
+                 self.sh_man.name, self.sh_cmd.name, self.sh_run.name)
 
-            time.sleep(0.5)
-            self.poll()
-            self.zero_xy_rot()
-            self.zero_z_rot()
+        args = (id_num, pi_ports, im_sz, ser, locks, names, logger)
 
-    def poll(self):
-        # - call to update the state data
-        # get most recent image
-        self.I_stamp, I = self.pi.get_image()
-        if I is not None:
-            self.I = I
+        self.pcontroller = mp.Process(target=handle_controller, args=args)
+        self.pcontroller.start()
 
-        # get most recent bno
-        self.x_stamp, bno = self.pi.get_bno()
-        if bno is not None:
-            self.x[6:10] = bno[0]
-            self.x[10:] = bno[1]
+        # set the zeros
+        time.sleep(0.5)        
+        self.zero_xy_rot()
+        self.zero_z_rot()
 
-        # get most recent altitude
-        self.z_stamp, z = self.pi.get_dis()
-        if z is not None:                
-            # correct distance using angle
-            [r, p, yw] = self.euler()
-            self.x[2] = z*np.cos(r)*np.cos(p)
-        
-    def euler(self):
-        [r, p, yw] = R.from_quat(self.x[6:10]).as_euler('xyz')
+    # shutdown operation
+    def shutdown(self):
+        # set shutdown flag
+        self.run[0] = False
+        self.pcontroller.join()
 
-        # transform to blimp coordinate system
-        r += pi
-        r -= 2*pi*(r > pi)
+        # cleanup shared memory
+        self.sh_x.close()
+        self.sh_x_stamp.close()
+        self.sh_img.close()
+        self.sh_img_stamp.close()
+        self.sh_des.close()
+        self.sh_rot0.close()
+        self.sh_man.close()
+        self.sh_cmd.close()
+        self.sh_run.close()
 
-        return -r, -p, yw
+        self.sh_x.unlink()
+        self.sh_x_stamp.unlink()
+        self.sh_img.unlink()
+        self.sh_img_stamp.unlink()
+        self.sh_des.unlink()
+        self.sh_rot0.unlink()
+        self.sh_man.unlink()
+        self.sh_cmd.unlink()
+        self.sh_run.unlink()
 
+    # user-interface
+    def get_image(self):
+        # protected read
+        self.lock_I.acquire()
+        I_ = self.img.copy()
+        self.lock_I.release()
+        return I_/255.
+
+    def get_raw_state(self):
+        # protected read
+        self.lock_x.acquire()
+        x_ = self.x.copy()
+        self.lock_x.release()    
+        return x_
+
+    def get_euler(self):
+        # protected read
+        self.lock_x.acquire()
+        x_ = self.x.copy()
+        self.lock_x.release()
+        return blimp_coordinates(euler(x_[1:5]), self.rot0.copy())
+
+    def get_veuler(self):
+        # protected read
+        self.lock_x.acquire()
+        x_ = self.x.copy()
+        self.lock_x.release()
+        return x_[5:7]    
+
+    def get_accel(self):
+        # protected read
+        self.lock_x.acquire()
+        x_ = self.x.copy()
+        self.lock_x.release()
+        return x_[8:]
+
+    def get_alt(self):
+        # protected read
+        self.lock_x.acquire()
+        x_ = self.x.copy()
+        self.lock_x.release()    
+
+        # correct altitude and return
+        eul = blimp_coordinates(euler(x_[1:5]), self.rot0.copy())
+        return x_[0]*np.cos(eul[0])*np.cos(eul[1])
+
+    def set_des(self, des):
+        # protected write to desired state
+        self.lock_des.acquire()
+        self.des[:] = des
+        self.lock_des.release()
+
+    # setup functions
     def zero_xy_rot(self):
-        [r, p, _] = self.euler()
+        # protected read
+        self.lock_x.acquire()
+        x_ = self.x.copy()
+        self.lock_x.release()
+
+        [r, p, _] = euler(x_[1:5])
+        
+        # protected write
+        self.lock_rot0.acquire()
         self.rot0[:2] = [r, p]
+        self.lock_rot0.release()
         
     def zero_z_rot(self):
-        self.rot0[2] = self.euler()[2]
+        # protected read
+        self.lock_x.acquire()
+        x_ = self.x.copy()
+        self.lock_x.release()
 
-    def get_state(self):
-        return self.x.copy()
+        [_, _, yw] = euler(x_[1:5])
 
-    def get_image(self):
-        return self.I.copy()
-
-    def set_wp(self, goal):
-        # compute the full three loop position control input
-        des_vx = self.pid_px.input(self.x[0], goal[0])
-        des_vy = self.pid_py.input(self.x[1], goal[1])
-
-        # compute the velocity input
-        self.set_vel([des_vx, des_vy])
-
-    def set_vel(self, vel):
-        # compute the double loop velocity control input
-        des_p = self.pid_vx.input(self.x[3], vel[0])
-        des_r = self.pid_vy.input(self.x[4], vel[1])
-
-        # compute the angle input
-        self.set_ang([des_p, des_r])
-
-    def set_ang(self, ang=[0,0]):
-        # compute the single loop angle control input
-        [r, p, _] = self.euler()
-
-        # adjust to 0-settings
-        r -= self.rot0[0]
-        p -= self.rot0[1]
-
-        # get roll and pitch velocities
-        vr = -self.x[10]
-        vp = -self.x[11]
-        
-        # - inputs
-        phat = np.array([p, vp])
-        pdes = np.array([ang[1], 0.])
-        rhat = np.array([r, vr])
-        rdes = np.array([ang[0], 0.])
-        self.u[0] = -self.pid_pitch.input(phat, pdes, given_velocity=True)
-        self.u[1] = self.pid_roll.input(rhat, rdes, given_velocity=True)
-
-    def set_heading(self, yw_des=0.):
-        # compute the single loop angle control input for heading
-        [_, _, yw] = self.euler()
-
-        # adjust to 0-settings
-        yw -= self.rot0[2]
-        vyw = self.x[12]
-        
-        # - inputs        
-        ywhat = np.array([yw, vyw])
-        ywdes = np.array([yw_des, 0.])
-        self.u[5] = self.pid_yaw.input(ywhat, ywdes, given_velocity=True)
-
-    def set_alt(self, alt, positive_only=False):
-        # compute the single loop altitude control input
-        self.u[2] = -self.pid_pz.input(self.x[2], alt)
-        if positive_only:
-          self.u[2] = min(self.u[2], 0.)
-
-    def step(self, cmd=None):
-        if cmd is not None:
-            self.u[0] = cmd[0]
-            self.u[1] = cmd[1]
-            self.u[2] = cmd[2]
-            self.u[3] = 0.
-            self.u[4] = 0.
-            self.u[5] = cmd[3]
-
-        # prioritize vertical thrust
-        updown_abs = self.u[2]
-        if abs(updown_abs) > 0.1:
-            self.u *= 0.3
-            
-        # clip extraneous input
-        self.u[2] = updown_abs
-        self.u = np.clip(self.u, -0.8, 0.8)
-
-        # mix commands to get motor inputs
-        duty_cycles = mix_inputs(self.u)
-
-        # add unique ID to end
-        msg = convertCMD(duty_cycles, self.id_num)
-
-        msgb = b''
-        for val in msg:
-            msgb += struct.pack('!B', int(val))
-
-        self.ser.write(msgb)
-        
-        # log data (if requested)
-        if self.logger:
-            self.idx += 1
-            self.uh.append(self.u.copy())
-            self.xh.append(self.x.copy())
-            self.Ih.append(self.I.copy())
-
-    def save(self, save_dir, extra=None):
-        if not self.logger:
-            print("No data saved!")
-            return
-            
-        # save historical data if logger flag is active
-        tsave = str(np.datetime64('now'))
-        usave = "inputs_"+tsave+".npy"
-        xsave = "states_"+tsave+".npy"
-
-        # concatenate to 2D arrays
-        self.uh = np.stack(self.uh).T
-        self.xh = np.stack(self.xh).T
-        self.Ih = np.stack(self.Ih)
-        
-        # check if save_dir exists first
-        if not os.path.isdir(save_dir):
-            os.mkdir(save_dir)
-        
-        # save blimp data
-        np.save(os.path.join(save_dir, usave), self.uh[:,:self.idx])
-        np.save(os.path.join(save_dir, xsave), self.xh[:,:self.idx])
-        Isave = "images_"+tsave+".npy"
-        np.save(os.path.join(save_dir, Isave), self.Ih[:,:,:,:self.idx])
-
-        if extra is not None:
-            exsave = "extra_"+tsave+".npy"
-            np.save(os.path.join(save_dir, exsave), extra)
-            
-        print("Data saved to", save_dir)
-
-
-def create_serial(port):
-    ser = serial.Serial()
-    ser.port = port
-    ser.baudrate = 921600
-    ser.write_timeout = 0
-    ser.open()
-    
-    return ser
+        # protected write
+        self.lock_rot0.acquire()
+        self.rot0[2] = yw
+        self.lock_rot0.release()

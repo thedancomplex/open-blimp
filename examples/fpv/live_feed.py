@@ -5,8 +5,9 @@ from scipy.spatial.transform import Rotation as R
 from piStreaming.rcv_pi02 import MultiRcv
 
 # setup the UDP receiver to receive images over port 8485 and BNO over port 8486
+im_sz = (240, 360, 3)
 ports = (1111, 1112, 1113)
-pi_ = MultiRcv(ports)
+pi_ = MultiRcv(ports, im_sz)
 
 # show the image
 fig, ax = plt.subplots(1,1)

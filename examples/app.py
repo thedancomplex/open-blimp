@@ -1,3 +1,4 @@
+import signal
 from pyBlimp.blimp import *
 
 # setup serial device

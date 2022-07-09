@@ -7,5 +7,6 @@ Note: This branch is for an upgraded hardware version of the Open-Blimp using th
 
 Software changes:
 - Parallel streaming from RPi02w using multiprocessing
+- Parallel angle control from base using multiprocessing
 - Using BNO055 library https://github.com/adafruit/Adafruit_Python_BNO055 instead due to integration issues with updated RPi02w
 - Streaming shell script at root level assuming open-blimp is installed in $HOME directory: stream_cmd.sh \<target ip address\>
