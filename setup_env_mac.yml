@@ -3,11 +3,12 @@ channels:
 - defaults
 - conda-forge
 dependencies:
-- python=3.6
+- python=3.8
 - scipy
 - numpy
 - pyserial
-- opencv=3.4.2
+- opencv
+- matplotlib
 - pip
 - pip:
   - pyyaml

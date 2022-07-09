@@ -224,9 +224,15 @@ def convertCMD(motor_duty_cycles, id_num):
     di = throttle > 0
     direction = di[0]*32 + di[1]*16 + di[2]*8 + di[3]*4 + di[4]*2 + di[5]*1
     throttle = abs(throttle)
-    checksum = ((sum(throttle) + direction + id_num) % 4) + 251
+    
+    if id_num is None:
+        checksum = ((sum(throttle) + direction) % 4) + 251
+        output = np.concatenate([[255], throttle, [direction], [checksum]])
 
-    output = np.concatenate([[255], throttle, [direction], [id_num], [checksum]])
+    else:
+        checksum = ((sum(throttle) + direction + id_num) % 4) + 251
+        output = np.concatenate([[255], throttle, [direction], [id_num], [checksum]])
+
     return output
 
 

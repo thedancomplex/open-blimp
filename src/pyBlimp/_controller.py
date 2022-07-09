@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import numpy as np
+import os
 import signal
 import struct
 import time
@@ -31,6 +32,7 @@ class _Controller:
     def __init__(self, id_num, pi_ports, im_sz, ser, locks, names, logger=False):
         self.id_num = id_num
         self.logger = logger
+        self.hz = 100.
 
         # store serial data
         self.ser = ser[0]
@@ -40,7 +42,7 @@ class _Controller:
         self.lock_x = locks[0]
         self.sh_x = sm.SharedMemory(names[0])        
         self.sh_x_stamp = sm.SharedMemory(names[1])
-        self.x = np.ndarray(11, dtype=np.double, buffer=self.sh_x.buf)
+        self.x = np.ndarray(10, dtype=np.double, buffer=self.sh_x.buf)
         self.x_stamp = np.ndarray(1, np.double, buffer=self.sh_x_stamp.buf)
 
         self.lock_I = locks[1]
@@ -71,14 +73,14 @@ class _Controller:
         
         # construct lowest-level PID controllers
         self.positive_only = True
-        k_r = np.array([-0.10, 0.0, 0.0])
-        k_p = np.array([-0.10, 0.0, 0.0])
-        k_yw = np.array([0.00, 0.0, 0.0])
-        k_pz = np.array([0.01, 0.0, 0.0])
-        self.pid_roll = PID(k_r, angle=True)
-        self.pid_pitch = PID(k_p, angle=True)
-        self.pid_yaw = PID(k_yw, angle=True)
-        self.pid_pz = PID(k_pz, windup=0.5)
+        k_r  = np.array([0.0, 0.0, 0.0])
+        k_p  = np.array([0.0, 0.0, 0.0])
+        k_yw = np.array([0.0, 0.0, 0.0])
+        k_pz = np.array([0.0, 0.0, 0.0])
+        self.pid_roll  = PID(k_r,  angle=True)
+        self.pid_pitch = PID(k_p,  angle=True)
+        self.pid_yaw   = PID(k_yw, angle=True)
+        self.pid_pz    = PID(k_pz, windup=0.5)
 
         # setup logger
         if self.logger:
@@ -92,16 +94,20 @@ class _Controller:
         signal.signal(signal.SIGINT, self.handler)
 
     def handler(self, signum, frame):
-        # send signal to cleanup
+        # - ctrl-c handler to start process cleanup
         self.run[0] = False
 
     # main loop
-    def loop(self, hz=100.):
+    def loop(self):
+        # - main control loop that runs at a desired frequency
+        # - and executes the angle controller at a high rate
+        # - and handles the associated shutdown
+
         # run this loop continuously at desired rate
         while self.run[0]:
             self.poll()
             self.step()
-            time.sleep(1./hz)
+            time.sleep(1./self.hz)
 
         # shutdown the raspberry pi
         self.pi.shutdown()
@@ -122,10 +128,10 @@ class _Controller:
 
         # save data to directory
         tsave = str(np.datetime64('now'))        
-        usave = "inputs_"+tsave+".npy"
-        xsave = "states_"+tsave+".npy"
-        Isave = "images_"+tsave+".npy"
-        Ssave = "stamps_"+tsave+".npy"
+        usave = os.path.join(tsave, "inputs.npy")
+        xsave = os.path.join(tsave, "states.npy")
+        Isave = os.path.join(tsave, "images.npy")
+        Ssave = os.path.join(tsave, "stamps.npy")
 
         # concatenate to 2D arrays
         uh = np.stack(self.uh).T
@@ -135,9 +141,14 @@ class _Controller:
 
         # check if save_dir exists first
         save_dir = "data"
+        spec_dir = os.path.join(save_dir, tsave)
         if not os.path.isdir(save_dir):
             os.mkdir(save_dir)
 
+        # check if specific_dir exists first
+        if not os.path.isdir(spec_dir):
+            os.mkdir(spec_dir)
+                
         # save blimp data
         np.save(os.path.join(save_dir, usave), uh[:,:self.idx])
         np.save(os.path.join(save_dir, xsave), xh[:,:self.idx])
@@ -151,16 +162,22 @@ class _Controller:
         _, z = self.pi.get_dis()
 
         if bno is not None:
+            # protected read
+            self.lock_rot0.acquire()
+            rot0 = self.rot0.copy()
+            self.lock_rot0.release()
+            eul = quat2euler(bno[0])
+
             # protected write
             self.lock_x.acquire()
-            self.x[0] = z
-            self.x[1:5] = bno[0]
-            self.x[5] = -bno[1][0]
-            self.x[6] = -bno[1][1]
-            self.x[7] = bno[1][2]
-            self.x[8] = bno[2][0]
-            self.x[9] = bno[2][1]
-            self.x[10] = bno[2][2]
+            self.x[0]   =  z               # altitude
+            self.x[1:4] =  wrap(eul-rot0)  # euler
+            self.x[4]   =  bno[1][0]       # vroll
+            self.x[5]   = -bno[1][1]       # vpitch
+            self.x[6]   = -bno[1][2]       # vyaw
+            self.x[7]   =  bno[2][0]       # xacc
+            self.x[8]   = -bno[2][1]       # yacc 
+            self.x[9]   = -bno[2][2]       # zacc
             self.x_stamp[0] = stamp
             self.lock_x.release()
 
@@ -180,15 +197,10 @@ class _Controller:
 
         # read necessary data
         x_ = self.x.copy()
-        eul = euler(x_[1:5])
 
         self.lock_des.acquire()
         des = self.des.copy()
         self.lock_des.release()
-
-        self.lock_rot0.acquire()
-        rot0 = self.rot0.copy()
-        self.lock_rot0.release()
 
         # manual flight control
         if self.man[0]:
@@ -196,18 +208,13 @@ class _Controller:
             u[0] = self.cmd[0]
             u[1] = self.cmd[1]
             u[2] = self.cmd[2]
-            u[3] = 0.
-            u[4] = 0.
             u[5] = self.cmd[3]
             self.lock_cmd.release()
             
         # autopilot flight control                    
-        else:                        
-            # adjust to blimp coordinates
-            eul = blimp_coordinates(eul, rot0)
-
-            # get roll, pitch, and yaw velocities
-            veul = x_[5:8]
+        else:   
+            # get altitude, roll, pitch, yaw and velocities
+            z, eul, veul = x_[0], x_[1:4], x_[4:7]
 
             # - inputs
             r_  = np.array([eul[0], veul[0]])
@@ -215,9 +222,9 @@ class _Controller:
             yw_ = np.array([eul[2], veul[2]])
             
             u[0] = -self.pid_pitch.input(p_, des[1], given_velocity=True)
-            u[1] = self.pid_roll.input(r_, des[2], given_velocity=True)
-            u[2] = -self.pid_pz.input(x_[0], des[0])
-            u[5] = self.pid_yaw.input(yw_, des[3], given_velocity=True)
+            u[1] =  self.pid_roll.input(r_, des[0], given_velocity=True)
+            u[2] = -self.pid_pz.input(z, des[3])
+            u[5] =  self.pid_yaw.input(yw_, des[2], given_velocity=True)
 
             if self.positive_only:
                 u[2] = min(u[2], 0.)
@@ -245,9 +252,13 @@ class _Controller:
         
         # log data (if requested)
         if self.logger:
+            self.lock_I.acquire()
+            I = self.img.copy()
+            self.lock_I.release()
+        
             self.idx += 1
             self.uh.append(u.copy())
-            self.xh.append(x.copy())
+            self.xh.append(x_.copy())
             self.Ih.append(I.copy())
             self.th.append(self.x_stamp[0].copy())
 

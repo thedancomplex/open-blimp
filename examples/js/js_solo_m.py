@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import signal
-import time
-import traceback
 
 from pyBlimp.blimp import Blimp
 from pyBlimp.utils import wrap, create_serial
@@ -34,14 +32,23 @@ des = np.zeros(4)
 
 while running:
     # handle the joystick
-    ax, _, _ = js.get_state()
-    
+    ax, auto_on, _ = js.get_state()
+
     # decide inputs
-    des[0] = -0.05*ax[0]
-    des[1] =  0.05*ax[1]
-    des[2] = wrap(des[2]+0.05*ax[2])
-    des[3] = np.clip(des[3]-0.05*ax[3], 0.0, 2.5)
-    b.set_des(des)
+    if auto_on:
+        des[0] = -0.05*ax[0]
+        des[1] =  0.05*ax[1]
+        des[2] = wrap(des[2]+0.05*ax[2])
+        des[3] = np.clip(des[3]-0.05*ax[3], 0.0, 2.5)
+        b.set_des(des)
+
+    else:
+        cmd = np.zeros(4)
+        cmd[0] = -0.05*ax[1]
+        cmd[1] = -0.05*ax[0]
+        cmd[2] = -0.05*ax[2]
+        cmd[3] = -0.05*ax[3]
+        b.set_cmd(cmd)
 
     # show the video
     I = b.get_image()

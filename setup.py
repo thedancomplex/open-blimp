@@ -8,6 +8,7 @@ def read(filename):
 
 setup(
     name = 'openBlimp',
+    version='1.1',
     packages = find_packages('src'),
     package_dir = {'': 'src'},
     description = 'OpenBlimp Code and Workshop Demos',

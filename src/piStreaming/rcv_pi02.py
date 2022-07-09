@@ -6,7 +6,13 @@ from piStreaming._rcv import handle_sensors
 
 
 class MultiRcv:
+    """ Main multiprocessing based object to handle the pi data stream.
+        - This class serves as the interface for a user
+        - Sensor handling is run on a separate process with shared memory    
+    """
+
     def __init__(self, ports, im_sz):
+        # pi UDP ports, 3 tuple, each value is an int
         self.ports = ports
 
         # create shared memory for mp
@@ -53,6 +59,10 @@ class MultiRcv:
         self.psensor.start()
 
     def shutdown(self):
+        # function to handle memory de-allocation and clean-up
+        # - a) call at the end of execution
+        # - b) call at SIGINT signal
+
         # set shutdown flag
         self.flag[0] = False
         self.psensor.join()
@@ -75,6 +85,8 @@ class MultiRcv:
         self.sh_flag.unlink()
         
     def get_image(self):
+        # grab the image data as np.uint8
+
         # protected read
         self.lock_img.acquire()
         stamp, img = self.img_stamp, self.img
@@ -83,6 +95,8 @@ class MultiRcv:
         return stamp, img
         
     def get_bno(self):
+        # grab the quaternion, gyro, and linear acceleration
+
         # protected read
         self.lock_bno.acquire()
         q = self.bno[0:4]
@@ -94,6 +108,8 @@ class MultiRcv:
         return stamp, (q, g, a)
 
     def get_dis(self):
+        # grab the distance measurement
+
         # protected read
         self.lock_dis.acquire()
         stamp, dis = self.dis_stamp, self.dis[0]/100.

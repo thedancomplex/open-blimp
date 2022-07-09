@@ -12,11 +12,20 @@ from multiprocessing import shared_memory as sm
 from numpy import pi
 
 def handle_sensors(ports, im_sz, names, locks):
+    """ private sensor handler spawned by a parent MultiRcv object
+        - this handle should NOT be used by an application
+        - only spawned and controlled by a parent MultiRcv object    
+    """
     # instantiate threads to handle sensor stream
     rcv = _Rcv(ports, im_sz, names, locks)
     rcv.shutdown()
     
 class _Rcv:
+    """ private sensor handler that runs on a spawned process to read data
+        - this handler should NOT be used by an application
+        - only spawned and controlled by a parent MultiRcv object    
+    """
+    
     def __init__(self, ports, im_sz, sm_names, locks):        
         self.ports = ports
         self.im_sz = im_sz
@@ -56,17 +65,23 @@ class _Rcv:
         self.dis_thread.start()
 
     def shutdown(self):
+        # - dummy function to wait for cleanup
         self.img_thread.join()
         self.bno_thread.join()
         self.dis_thread.join()
 
     def handler(self, signum, frame):
+        # - ctrl-c handler to start process cleanup
         sh_flag = sm.SharedMemory(self.sm_names[-1])
         running = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
         running[0] = False
         sh_flag.close()
 
     def handle_img_read(self):
+        # - parses all image data coming from the pi and stores it
+        # - into shared memory. Uses protected writes to make sure
+        # - race conditions are avoided
+    
         # setup running flag 
         sh_flag = sm.SharedMemory(self.sm_names[-1])
         running = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
@@ -128,6 +143,10 @@ class _Rcv:
         self.sh_img_stamp.close()
 
     def handle_bno_read(self):
+        # - parses all bno data coming from the pi and stores it
+        # - into shared memory. Uses protected writes to make sure
+        # - race conditions are avoided
+
         # setup socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(0)
@@ -164,6 +183,10 @@ class _Rcv:
         self.sh_bno_stamp.close()
         
     def handle_dis_read(self):
+        # - parses all distance data coming from the pi and stores it
+        # - into shared memory. Uses protected writes to make sure
+        # - race conditions are avoided
+
         # setup socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(0)

@@ -7,17 +7,23 @@ from pyBlimp._controller import handle_controller
 from pyBlimp.utils import *
 
 class Blimp:
-    def __init__(self, id_num, ser, pi_ports=[8485, 8486, 8487], logger=False):
+    def __init__(self, ser, id_num=None, ports=[8485, 8486, 8487], logger=False):
+        """ Main interfacing class for a user to control a single blimp
+            - ser is a serial object produced from pySerial
+            - id_num is unique id used for multicasting, if not multicasting
+            - leave as None
+        """
+        
         # define incoming image size
         im_sz = (240, 360, 3)
 
         # setup shared memory state (1-z, 4-quat, 3-euler, 3-linear accel)
         self.lock_x = mp.Lock()
-        self.sh_x = sm.SharedMemory(create=True, size=88)
+        self.sh_x = sm.SharedMemory(create=True, size=80)
         self.sh_x_stamp = sm.SharedMemory(create=True, size=8)
-        self.x = np.ndarray(11, dtype=np.double, buffer=self.sh_x.buf)
+        self.x = np.ndarray(10, dtype=np.double, buffer=self.sh_x.buf)
         self.x_stamp = np.ndarray(1, np.double, buffer=self.sh_x_stamp.buf)
-        self.x[:] = [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0.]
+        self.x[:] = 0.
         self.x_stamp[0] = 0.        
 
         # setup shared image access
@@ -46,7 +52,7 @@ class Blimp:
         self.man = np.ndarray(1, dtype=np.bool_, buffer=self.sh_man.buf)
         self.sh_cmd = sm.SharedMemory(create=True, size=32)
         self.cmd = np.ndarray(4, dtype=np.double, buffer=self.sh_cmd.buf)        
-        self.man[0] = False
+        self.man[0] = True
         self.cmd[:] = np.zeros(4)
 
         # setup shared process flag
@@ -61,7 +67,7 @@ class Blimp:
                  self.sh_img_stamp.name, self.sh_des.name, self.sh_rot0.name,
                  self.sh_man.name, self.sh_cmd.name, self.sh_run.name)
 
-        args = (id_num, pi_ports, im_sz, ser, locks, names, logger)
+        args = (id_num, ports, im_sz, ser, locks, names, logger)
 
         self.pcontroller = mp.Process(target=handle_controller, args=args)
         self.pcontroller.start()
@@ -106,7 +112,11 @@ class Blimp:
         self.lock_I.release()
         return I_/255.
 
-    def get_raw_state(self):
+    def get_state(self):
+        """ get the full corrected state
+            - returns in local blimp coordinate frame
+            - returns (pz, r, p, yw, vr, vp, vyw, ax, ay, az)
+        """
         # protected read
         self.lock_x.acquire()
         x_ = self.x.copy()
@@ -114,20 +124,32 @@ class Blimp:
         return x_
 
     def get_euler(self):
+        """ get the linear acceleration (without gravity)
+            - returns in local blimp coordinate frame
+            - returns (ax, ay, az)
+        """
         # protected read
         self.lock_x.acquire()
         x_ = self.x.copy()
         self.lock_x.release()
-        return blimp_coordinates(euler(x_[1:5]), self.rot0.copy())
+        return x_[1:4]
 
     def get_veuler(self):
+        """ get the angular velocity
+            - returns in local blimp coordinate frame
+            - returns (vr, vp, vyw)
+        """
         # protected read
         self.lock_x.acquire()
         x_ = self.x.copy()
         self.lock_x.release()
-        return x_[5:7]    
+        return x_[5:8]    
 
     def get_accel(self):
+        """ get the linear acceleration (without gravity)
+            - returns in local blimp coordinate frame
+            - returns (ax, ay, az)
+        """
         # protected read
         self.lock_x.acquire()
         x_ = self.x.copy()
@@ -135,6 +157,10 @@ class Blimp:
         return x_[8:]
 
     def get_alt(self):
+        """ get the roll/pitch corrected altitude
+            - returns in local blimp coordinate frame
+            - uses a write-safe lock to get the altitude
+        """
         # protected read
         self.lock_x.acquire()
         x_ = self.x.copy()
@@ -145,32 +171,67 @@ class Blimp:
         return x_[0]*np.cos(eul[0])*np.cos(eul[1])
 
     def set_des(self, des):
+        """ set the desired local frame states for the blimp to track
+            - des is a numpy array of dim 4x1 with values as
+            - des[0] : desired roll
+            - des[1] : desired pitch
+            - des[2] : desired yaw
+            - des[3] : desired altitude
+            
+        """
+    
+        # limit the desired states to appropriate space    
+        des[0] = np.clip(des[0], 0.0, 2.5)
+        des[1:] = wrap(des[1:])
+        
+        # engage auto mode (no lock needed)
+        self.man[0] = False
+        
         # protected write to desired state
         self.lock_des.acquire()
         self.des[:] = des
         self.lock_des.release()
 
+    def set_cmd(self, cmd):
+        """ set the manual inputs to apply
+            - cmd is a numpy array of dim 4x1 with values as
+            - cmd[0] : force along x
+            - cmd[1] : force along y
+            - cmd[2] : force along z
+            - cmd[3] : torque along z
+        """
+
+        # engage manual mode (no lock needed)
+        self.man[0] = True
+
+        # protected write to manual input
+        self.lock_cmd.acquire()
+        self.cmd[:] = cmd
+        self.lock_cmd.release()        
+
     # setup functions
     def zero_xy_rot(self):
-        # protected read
-        self.lock_x.acquire()
-        x_ = self.x.copy()
-        self.lock_x.release()
-
-        [r, p, _] = euler(x_[1:5])
+        """ grabs the current roll and pitch angle and stores it as
+            - the zero angle which is used to correct all measurements
+            - for user interfacing and for blimp stabilization
+        """
         
+        # protected read
+        [r, p, _] = self.get_euler()
+                
         # protected write
         self.lock_rot0.acquire()
         self.rot0[:2] = [r, p]
         self.lock_rot0.release()
         
     def zero_z_rot(self):
+        """ grabs the current yaw angle and stores it as the zero angle 
+            - which is used to correct all measurements for user 
+            - interfacing and for blimp stabilization
+        """
+        
         # protected read
-        self.lock_x.acquire()
-        x_ = self.x.copy()
-        self.lock_x.release()
-
-        [_, _, yw] = euler(x_[1:5])
+        [_, _, yw] = self.get_euler()
 
         # protected write
         self.lock_rot0.acquire()

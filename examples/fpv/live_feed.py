@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import signal
 
-from scipy.spatial.transform import Rotation as R
 from piStreaming.rcv_pi02 import MultiRcv
+
 
 # setup the UDP receiver to receive images over port 8485 and BNO over port 8486
 im_sz = (240, 360, 3)
@@ -22,19 +22,15 @@ signal.signal(signal.SIGINT, exit_handle)
 
 while running:
     # query image
-    _, img = pi_.get_image()
+    _, I = pi_.get_image()
     ax.clear()
-    ax.imshow(img)
-    plt.draw(); plt.pause(0.001)
+    ax.imshow(I)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_title("FPV")
+    plt.draw(); plt.pause(0.0001)
 
-    # query imu
-    # bno_stamp, bno = pi_.get_bno()
-    # q = bno[0]
-    # [r, p, yw] = R.from_quat(q).as_euler('xyz')
-    # print(bno_stamp, "Roll:", r)
-
-    # query distance
-    # dis_stamp, dis = pi_.get_dis()
-    # print(dis_stamp, "Dist:", dis, "(m)")
+    # break if the figure is closed
+    if not plt.fignum_exists(fig.number): running = False
 
 pi_.shutdown()
