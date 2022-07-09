@@ -17,7 +17,7 @@ class MultiStream:
         # store camera params
         self.res = (360, 240)
         self.fps = 20
-        self.quality = 10
+        self.quality = 15
 
         # setup the processes
         self.pcam = mp.Process(target=self.handle_cam_write, args=())
