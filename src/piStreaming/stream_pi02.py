@@ -242,7 +242,7 @@ class MultiStream:
         sh_flag.close()
         sock.close()
 
-    def handle_dist(self, ip, port, fname):
+    def handle_dis(self, ip, port, fname):
         # see if VL53L1X libs are installed
         try:
             import board
