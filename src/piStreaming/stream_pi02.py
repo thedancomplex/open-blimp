@@ -205,7 +205,7 @@ class MultiStream:
         sh_flag.close()
         cam.close()
         
-    def handle_bno_write(self, ip, port, fname):
+    def handle_bno(self, ip, port, fname):
         # see if BNO055 libs are installed
         try:
             from Adafruit_BNO055 import BNO055
@@ -241,7 +241,7 @@ class MultiStream:
         sh_flag.close()
         sock.close()
 
-    def handle_dist_write(self):
+    def handle_dist(self):
         # see if VL53L1X libs are installed
         try:
             import board
