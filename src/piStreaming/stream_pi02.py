@@ -5,6 +5,7 @@ import signal
 import socket
 import struct
 import time
+import traceback
 
 from multiprocessing import shared_memory as sm
 
@@ -27,6 +28,7 @@ class MultiStream:
         signal.signal(signal.SIGINT, self.handler)
 
     def handler(self, signum, frame):
+        traceback.print_exc()
         self.run = False
 
     def run(self):
