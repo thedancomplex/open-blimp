@@ -102,7 +102,8 @@ class MultiStream:
                 d_port = 1026 + 3*(id_num-1)
 
                 # setup the processes
-                args = (ip, c_port, res, fps, qual, self.sh_flag.name)
+                fname = self.sh_flag.name
+                args = (ip, c_port, res, fps, qual, fname)
                 self.pcam = mp.Process(target=self.handle_cam, args=args)
                 self.pbno = mp.Process(target=self.handle_bno, args=(ip, b_port, fname))
                 self.pdis = mp.Process(target=self.handle_dis, args=(ip, d_port, fname))
@@ -235,13 +236,13 @@ class MultiStream:
 
             bno_packet = quat + gyro + acc + (tframe,)
             bno_bytes = struct.pack("<11d", *bno_packet)
-            sock.sendto(bno_bytes, (self.udp_ip, self.bno_port))
+            sock.sendto(bno_bytes, (ip, port))
 
         # cleanup
         sh_flag.close()
         sock.close()
 
-    def handle_dist(self):
+    def handle_dist(self, ip, port, fname):
         # see if VL53L1X libs are installed
         try:
             import board
@@ -276,7 +277,7 @@ class MultiStream:
                     tframe = time.time() - self.t0
                     dist_packet = (distance, tframe)
                     dist_bytes = struct.pack("<2d", *dist_packet)
-                    sock.sendto(dist_bytes, (self.udp_ip, self.dist_port))
+                    sock.sendto(dist_bytes, (ip, port))
 
             time.sleep(0.02)
 
