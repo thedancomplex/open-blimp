@@ -5,7 +5,6 @@ import signal
 import socket
 import struct
 import time
-import traceback
 
 from multiprocessing import shared_memory as sm
 
@@ -28,7 +27,6 @@ class MultiStream:
         signal.signal(signal.SIGINT, self.handler)
 
     def handler(self, signum, frame):
-        #traceback.print_exc()
         self.running = False
 
     def run(self):
@@ -144,15 +142,21 @@ class MultiStream:
 
         # connect to the server
         sock = socket.socket()
-        sock.settimeout(0.5)
+        sock.settimeout(2)
         connected = False
-        while not connected:
+        while not connected and flag[0]:
             try:
                 sock.connect((ip, port))
                 connected = True
 
             except: pass
 
+        # return prematurely if stopped early
+        if not connected: 
+            sh_flag.close()
+            cam.close()
+            return        
+               
         print("Camera successfully registered")
         cam_connection = sock.makefile('wb')
 
@@ -186,8 +190,8 @@ class MultiStream:
             buf.truncate()
 
         # cleanup
-        sh_flag.close()
         cam_connection.close()
+        sh_flag.close()
         cam.close()
         
     def handle_bno_write(self, ip, port, fname):
