@@ -5,6 +5,8 @@ import socket
 import struct
 import time
 
+from multiprocessing import shared_memory as sm
+
 
 class MultiStream:
     def __init__(self):
