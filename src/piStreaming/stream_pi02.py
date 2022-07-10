@@ -54,7 +54,7 @@ class MultiStream:
                 except: pass
 
             # if stop signal is read, set flag and stop
-            nbytes = len(data)            
+            nbytes = len(data); print(nbytes)     
             if nbytes == 4:
                 # parse data
                 msg = str(data)[2:][:-1]

@@ -67,7 +67,7 @@ class _Controller:
         self.cmd = np.ndarray(4, dtype=np.double, buffer=self.sh_cmd.buf)        
 
         self.sh_run = sm.SharedMemory(names[8])
-        self.run = np.ndarray(1, dtype=np.bool_, buffer=self.sh_run.buf)
+        self.running = np.ndarray(1, dtype=np.bool_, buffer=self.sh_run.buf)
 
         # setup sensing tools (and sleep to read some data)
         self.pi = MultiRcv(cfg)
@@ -96,7 +96,7 @@ class _Controller:
 
     def handler(self, signum, frame):
         # - ctrl-c handler to start process cleanup
-        self.run[0] = False
+        self.running[0] = False
 
     # main loop
     def run(self):
@@ -105,7 +105,7 @@ class _Controller:
         # - and handles the associated shutdown
 
         # run this loop continuously at desired rate
-        while self.run[0]:
+        while self.running[0]:
             self.poll()
             self.step()
             time.sleep(1./self.hz)

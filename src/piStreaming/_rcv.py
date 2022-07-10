@@ -28,14 +28,6 @@ class _Rcv:
     
     def __init__(self, cfg, names, locks):        
         self.cfg = cfg
-        id_num = cfg['id_num']
-        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)
-
-        self.c_port = 1024 + 3*(id_num-1)
-        self.b_port = 1025 + 3*(id_num-1)
-        self.d_port = 1026 + 3*(id_num-1)
-
-        self.names = names
 
         # split the locks
         self.lock_img = locks[0]
@@ -52,6 +44,7 @@ class _Rcv:
         self.sh_flag = sm.SharedMemory(names[6])
 
         # interfaces for accessing shared memory
+        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)        
         self.img = np.ndarray(im_sz, dtype=np.uint8, buffer=self.sh_img.buf)
         self.bno = np.ndarray(10, dtype=np.double, buffer=self.sh_bno.buf)
         self.dis = np.ndarray(1, dtype=np.double, buffer=self.sh_dis.buf)
@@ -68,35 +61,46 @@ class _Rcv:
         # setup control-c handler
         signal.signal(signal.SIGINT, self.handler)
 
+    def run(self):
+        # number of times to attempt connection
+        num_tries = 3
+
         # prep the start signal
-        my_ip = cfg['my_ip'].split('.')
+        my_ip = self.cfg['my_ip'].split('.')
         my_ip = [int(x) for x in my_ip]
         
-        id_data = struct.pack("<1B", id_num)
+        id_data = struct.pack("<1B", self.cfg['id_num'])
         ip_data = struct.pack("<4B", *my_ip)
-        res_data = struct.pack("<2H", *im_sz)
-        fps_data = struct.pack("<1B", fps)
-        qual_data = struct.pack("<1B", qual)
+        res_data = struct.pack("<2H", *(self.cfg['im_cols'], self.cfg['im_rows']))
+        fps_data = struct.pack("<1B", self.cfg['fps'])
+        qual_data = struct.pack("<1B", self.cfg['qual'])
         data = id_data + ip_data + res_data + fps_data + qual_data
 
         # send the start signal
         sock = socket.socket()
         sock.settimeout(0.5)
-        connected = False
-        while not connected:
+        connected, tries = False, 0
+
+        while not connected and tries < num_tries:
+            print("Trying to connect...")
+            print(self.cfg['pi_ip'])
             try:
-                sock.connect((cfg['pi_ip'], 8485))
+                sock.connect((self.cfg['pi_ip'], 8485))
                 connected = True
 
-            except: pass        
+            except: tries += 1    
 
-        con = sock.makefile('wb')
-        con.write(data)
-        con.flush()
-        con.close()
-        print("Pi stream started!")
+        if tries < num_tries:
+            con = sock.makefile('wb')
+            con.write(data)
+            con.flush()
+            con.close()
+            print("Pi stream started!")
 
-    def run(self):
+        else: 
+            print("EXIT")
+            return
+
         # start the threads
         self.img_thread.start()
         self.bno_thread.start()
@@ -111,26 +115,29 @@ class _Rcv:
         msg = "STOP"
         data = struct.pack("<4s", msg.encode('UTF-8'))
 
-        sock = socket.socket()
-        sock.settimeout(0.5)
-        connected = False
-        while not connected:
+        connected, tries = False, 0
+        while not connected and tries < num_tries:
+            print("Trying to connect 2")
             try:
                 sock.connect((self.cfg['pi_ip'], 8485))
                 connected = True
 
-            except: pass        
+            except: tries += 1        
 
-        con = sock.makefile('wb')
-        con.write(data)
-        con.flush()
-        con.close()
+        if tries < num_tries:
+            con = sock.makefile('wb')
+            con.write(data)
+            con.flush()
+            con.close()
+
+        else: 
+            print("Connection to ", self.cfg['pi_ip'], " failed! Skipping shutdown request...")
         
     def handler(self, signum, frame):
         # - ctrl-c handler to start process cleanup
         self.running[0] = False
 
-    def handle_img_read(self, fname):
+    def handle_img_read(self):
         # - parses all image data coming from the pi and stores it
         # - into shared memory. Uses protected writes to make sure
         # - race conditions are avoided
@@ -138,7 +145,7 @@ class _Rcv:
         # setup socket
         sock = socket.socket()
         sock.settimeout(0.5)
-        sock.bind(('0.0.0.0', self.c_port))
+        sock.bind(('0.0.0.0', 1024+3*(self.cfg['id_num']-1)))
         sock.listen(0)
         
         connected = False
@@ -188,7 +195,8 @@ class _Rcv:
 
         self.sh_img.close()
         self.sh_img_stamp.close()
-
+        print("EXIT C")
+        
     def handle_bno_read(self):
         # - parses all bno data coming from the pi and stores it
         # - into shared memory. Uses protected writes to make sure
@@ -198,7 +206,7 @@ class _Rcv:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(0)
         sock.settimeout(0.5)        
-        sock.bind(('0.0.0.0', self.b_port))
+        sock.bind(('0.0.0.0', 1025+3*(self.cfg['id_num']-1)))
         
         while self.running[0]:
             try: data, _ = sock.recvfrom(88)
@@ -223,6 +231,7 @@ class _Rcv:
                 
         self.sh_bno.close()
         self.sh_bno_stamp.close()
+        print("EXIT B")
         
     def handle_dis_read(self):
         # - parses all distance data coming from the pi and stores it
@@ -233,7 +242,7 @@ class _Rcv:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(0)
         sock.settimeout(0.5)        
-        sock.bind(('0.0.0.0', self.d_port))
+        sock.bind(('0.0.0.0', 1026+3*(self.cfg['id_num']-1)))
 
         while self.running[0]:
             try: data, _ = sock.recvfrom(16)
@@ -255,4 +264,5 @@ class _Rcv:
 
         self.sh_dis.close()
         self.sh_dis_stamp.close()
+        print("EXIT D")
 
