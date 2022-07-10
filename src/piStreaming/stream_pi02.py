@@ -86,18 +86,12 @@ class MultiStream:
 
 
                 # - 1 byte id_num, 4 bytes IP, 4 bytes img size, 1 byte fps, 1 byte quality 
-                id_data = data[0]; print(id_data, type(id_data))
-                ip_data = data[1:5]
-                res_data = data[5:9]
-                fps_data = data[9]; print(fps_data)
-                qual_data = data[10]; print(qual_data)
-
-                id_num = struct.unpack("<1B", id_data)
-                ip = struct.unpack("<4B", ip_data)
+                id_num = data[0]
+                ip = struct.unpack("<4B", data[1:5])
                 ip = ".".join(map(str, ip))
-                res = struct.unpack("<2H", res_data)
-                fps = struct.unpack("<1B", fps_data)
-                qual = struct.unpack("<1B", qual_data)
+                res = struct.unpack("<2H", data[5:9])
+                fps = data[9]
+                qual = data[10]
 
                 # start streams
                 self.flag[0] = True
