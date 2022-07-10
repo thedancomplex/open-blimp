@@ -32,14 +32,14 @@ class MultiStream:
         self.running = False
 
     def run(self):
+        # setup the socket for listening
+        sock = socket.socket()
+        sock.settimeout(0.5)
+        sock.bind(('0.0.0.0', 8485))
+        sock.listen(0)
+
         # wait for a start signal
         while self.running:
-            # setup the socket for parameter reading (on port 8485 by default)
-            sock = socket.socket()
-            sock.settimeout(0.5)
-            sock.bind(('0.0.0.0', 8485))
-            sock.listen(0)
-
             # wait for a request
             connected = False
             print("Waiting for connection...")
