@@ -43,7 +43,7 @@ class MultiStream:
             # wait for a request
             connected = False
             print("Waiting for connection...")
-            while not connected and self.run:
+            while not connected and self.running:
                 try: con, connected = sock.accept()[0].makefile('rb'), True
                 except: pass
                 
