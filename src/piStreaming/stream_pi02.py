@@ -23,17 +23,17 @@ class MultiStream:
         self.flag[0] = False
                 
         # setup the running flag (to be stopped in ctrl-c event)
-        self.run = True
+        self.running = True
 
         signal.signal(signal.SIGINT, self.handler)
 
     def handler(self, signum, frame):
         traceback.print_exc()
-        self.run = False
+        self.running = False
 
     def run(self):
         # wait for a start signal
-        while self.run:
+        while self.running:
             # setup the socket for parameter reading (on port 8485 by default)
             sock = socket.socket()
             sock.settimeout(0.5)
@@ -121,23 +121,6 @@ class MultiStream:
 
         self.flag[0].close()
         self.flag[0].unlink()
-
-
-    def stop(self):
-        # stop the camera process
-        if self.cam_running:
-            self.pcam.terminate()
-            self.pcam.join()
-
-        # stop the BNO process
-        if self.bno_running:
-            self.pbno.terminate()
-            self.pbno.join()
-
-        # stop the IR laser process
-        if self.vl53_running:
-            self.pdist.terminate()
-            self.pdist.join()
 
     def handle_cam(self, ip, port, res, fps, q, fname):
         # see if camera libs are installed
