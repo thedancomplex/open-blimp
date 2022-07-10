@@ -33,7 +33,7 @@ class MultiStream:
         sock = socket.socket()
         sock.bind(('0.0.0.0', 8485))
         sock.listen(0)
-        sock.settimeout(2)
+        sock.settimeout(0.5)
 
         # wait for a start signal
         while self.running:
@@ -43,7 +43,6 @@ class MultiStream:
             connected = False
             print("Waiting for connection...")
             while not connected and self.running:
-                print("Waiting...")
                 try: 
                     con = sock.accept()[0].makefile('rb')
                     connected = True
@@ -143,7 +142,7 @@ class MultiStream:
 
         # connect to the server
         sock = socket.socket()
-        sock.settimeout(2)
+        sock.settimeout(0.5)
         connected = False
         while not connected and flag[0]:
             try:
@@ -212,6 +211,16 @@ class MultiStream:
         except:
             print("BNO055 library import failed! Ignoring imu stream") 
             return
+
+        # setup the bno055
+        sensor = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
+        sensor.set_mode(8) # 8- IMU mode, 12 - NDOF mode
+        if sensor.begin():
+            print("BNO055 successfully registered")
+
+        else:
+            print("BNO055 failed!")
+            return
         
         # setup shared memory flag
         sh_flag = sm.SharedMemory(fname)
@@ -219,11 +228,6 @@ class MultiStream:
 
         # setup the socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-        # setup the bno055
-        sensor = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
-        sensor.set_mode(8) # 8- IMU mode, 12 - NDOF mode
-        print("BNO055 successfully registered")
 
         # start the bno055 stream
         while flag[0]:
