@@ -28,7 +28,7 @@ class MultiStream:
         signal.signal(signal.SIGINT, self.handler)
 
     def handler(self, signum, frame):
-        traceback.print_exc()
+        #traceback.print_exc()
         self.running = False
 
     def run(self):
