@@ -215,12 +215,6 @@ class MultiStream:
         # setup the bno055
         sensor = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
         sensor.set_mode(8) # 8- IMU mode, 12 - NDOF mode
-        if sensor.begin():
-            print("BNO055 successfully registered")
-
-        else:
-            print("BNO055 failed!")
-            return
         
         # setup shared memory flag
         sh_flag = sm.SharedMemory(fname)
@@ -241,6 +235,7 @@ class MultiStream:
             sock.sendto(bno_bytes, (ip, port))
 
         # cleanup
+        del sensor
         sh_flag.close()
         sock.close()
 
@@ -284,6 +279,8 @@ class MultiStream:
             time.sleep(0.02)
 
         # cleanup
+        del vl53
+        del i2c
         sh_flag.close()
         sock.close()
 
