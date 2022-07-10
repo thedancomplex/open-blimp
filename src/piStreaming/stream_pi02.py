@@ -200,8 +200,11 @@ class MultiStream:
                 cam_connection.flush()
 
             except: 
+                # if the cam connection fails for some reason
                 print("Broken image pipe!")
-                break
+                sh_flag.close()
+                cam.close()
+                return
                 
             # delete buffer
             buf.seek(0)
