@@ -75,7 +75,7 @@ class _Rcv:
         fps_data = struct.pack("<1B", self.cfg['fps'])
         qual_data = struct.pack("<1B", self.cfg['qual'])
         data = id_data + ip_data + res_data + fps_data + qual_data
-        print(len(data))
+
         # send the start signal
         sock = socket.socket()
         sock.settimeout(0.5)
