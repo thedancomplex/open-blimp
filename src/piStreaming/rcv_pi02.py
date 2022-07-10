@@ -12,7 +12,7 @@ class MultiRcv:
     """
 
     def __init__(self, cfg):
-        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)
+        im_sz = (cfg['im_rows'], cfg['im_cols'], 3)
 
         # create shared memory for mp
         self.sh_img = sm.SharedMemory(create=True, size=np.prod(im_sz))

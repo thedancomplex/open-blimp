@@ -44,7 +44,7 @@ class _Rcv:
         self.sh_flag = sm.SharedMemory(names[6])
 
         # interfaces for accessing shared memory
-        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)        
+        im_sz = (cfg['im_rows'], cfg['im_cols'], 3)        
         self.img = np.ndarray(im_sz, dtype=np.uint8, buffer=self.sh_img.buf)
         self.bno = np.ndarray(10, dtype=np.double, buffer=self.sh_bno.buf)
         self.dis = np.ndarray(1, dtype=np.double, buffer=self.sh_dis.buf)

@@ -30,7 +30,7 @@ class _Controller:
     """
 
     def __init__(self, ser, cfg, locks, names, logger=False):
-        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)
+        im_sz = (cfg['im_rows'], cfg['im_cols'], 3)
         self.id_num = cfg['id_num']
         self.logger = logger
         self.hz = 100.
