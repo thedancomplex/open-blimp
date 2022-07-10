@@ -90,7 +90,7 @@ class MultiStream:
                 ip_data = data[1:5]
                 res_data = data[5:9]
                 fps_data = data[9]; print(fps_data)
-                qual_data = data[10] print(qual_data)
+                qual_data = data[10]; print(qual_data)
 
                 id_num = struct.unpack("<1B", id_data)
                 ip = struct.unpack("<4B", ip_data)
