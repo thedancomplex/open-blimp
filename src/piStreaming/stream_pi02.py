@@ -32,7 +32,7 @@ class MultiStream:
     def run(self):
         # setup the socket for listening
         sock = socket.socket()
-        sock.settimeout(0.5)
+        sock.settimeout(2)
         sock.bind(('0.0.0.0', 8485))
         sock.listen(0)
 
@@ -42,6 +42,7 @@ class MultiStream:
             connected = False
             print("Waiting for connection...")
             while not connected and self.running:
+                print("Waiting...")
                 try: 
                     con = sock.accept()[0].makefile('rb')
                     connected = True
@@ -56,21 +57,7 @@ class MultiStream:
                 except: pass
 
             # if stop signal is read, set flag and stop
-            nbytes = len(data); print(nbytes)     
-            if nbytes == 4:
-                # parse data
-                msg = str(data)[2:][:-1]
-            
-                # check if correct message
-                if msg == 'STOP': self.flag[0] = False
-                print("Stop heard! Ending streams")
-
-                # wait for processes to finish before resetting
-                self.pcam.join()
-                self.pbno.join()
-                self.pdis.join()
-
-            if nbytes == 11:
+            if len(data) == 11:
                 # parse data
                 msg = str(data)[2:][:-1]
             
