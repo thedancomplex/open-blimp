@@ -1,5 +1,8 @@
+.gitignore
 __pycache__/
 build/
 dist/
 *.egg-info/
-demos/joystick_demo/utils/__pycache__/
+examples/js/utils/__pycache__/
+examples/bl_track/
+examples/tag_track/

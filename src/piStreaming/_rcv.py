@@ -11,14 +11,14 @@ import time
 from multiprocessing import shared_memory as sm
 from numpy import pi
 
-def handle_sensors(ports, im_sz, names, locks):
+def handle_sensors(cfg, names, locks):
     """ private sensor handler spawned by a parent MultiRcv object
         - this handle should NOT be used by an application
         - only spawned and controlled by a parent MultiRcv object    
     """
     # instantiate threads to handle sensor stream
-    rcv = _Rcv(ports, im_sz, names, locks)
-    rcv.shutdown()
+    rcv = _Rcv(cfg, names, locks)
+    rcv.run()
     
 class _Rcv:
     """ private sensor handler that runs on a spawned process to read data
@@ -26,23 +26,30 @@ class _Rcv:
         - only spawned and controlled by a parent MultiRcv object    
     """
     
-    def __init__(self, ports, im_sz, sm_names, locks):        
-        self.ports = ports
-        self.im_sz = im_sz
-        self.sm_names = sm_names
-        
+    def __init__(self, cfg, names, locks):        
+        self.cfg = cfg
+        id_num = cfg['id_num']
+        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)
+
+        self.c_port = 1024 + 3*(id_num-1)
+        self.b_port = 1025 + 3*(id_num-1)
+        self.d_port = 1026 + 3*(id_num-1)
+
+        self.names = names
+
         # split the locks
         self.lock_img = locks[0]
         self.lock_bno = locks[1]
         self.lock_dis = locks[2]
         
         # setup the shared memory
-        self.sh_img = sm.SharedMemory(sm_names[0])
-        self.sh_bno = sm.SharedMemory(sm_names[2])
-        self.sh_dis = sm.SharedMemory(sm_names[4])
-        self.sh_img_stamp = sm.SharedMemory(sm_names[1])
-        self.sh_bno_stamp = sm.SharedMemory(sm_names[3])
-        self.sh_dis_stamp = sm.SharedMemory(sm_names[5])
+        self.sh_img = sm.SharedMemory(names[0])
+        self.sh_bno = sm.SharedMemory(names[2])
+        self.sh_dis = sm.SharedMemory(names[4])
+        self.sh_img_stamp = sm.SharedMemory(names[1])
+        self.sh_bno_stamp = sm.SharedMemory(names[3])
+        self.sh_dis_stamp = sm.SharedMemory(names[5])
+        self.sh_flag = sm.SharedMemory(names[6])
 
         # interfaces for accessing shared memory
         self.img = np.ndarray(im_sz, dtype=np.uint8, buffer=self.sh_img.buf)
@@ -51,57 +58,98 @@ class _Rcv:
         self.img_stamp = np.ndarray(1, np.double, buffer=self.sh_img_stamp.buf)
         self.bno_stamp = np.ndarray(1, np.double, buffer=self.sh_bno_stamp.buf)
         self.dis_stamp = np.ndarray(1, np.double, buffer=self.sh_dis_stamp.buf)
+        self.running = np.ndarray(1, dtype=np.bool_, buffer=self.sh_flag.buf)
 
         # setup threads
-        self.img_thread = threading.Thread(target=self.handle_img_read, args=())        
+        self.img_thread = threading.Thread(target=self.handle_img_read, args=())
         self.bno_thread = threading.Thread(target=self.handle_bno_read, args=())
         self.dis_thread = threading.Thread(target=self.handle_dis_read, args=())
 
         # setup control-c handler
         signal.signal(signal.SIGINT, self.handler)
 
+        # prep the start signal
+        my_ip = cfg['my_ip'].split('.')
+        my_ip = [int(x) for x in my_ip]
+        
+        id_data = struct.pack("<1B", id_num)
+        ip_data = struct.pack("<4B", *my_ip)
+        res_data = struct.pack("<2H", *im_sz)
+        fps_data = struct.pack("<1B", fps)
+        qual_data = struct.pack("<1B", qual)
+        data = id_data + ip_data + res_data + fps_data + qual_data
+
+        # send the start signal
+        sock = socket.socket()
+        sock.settimeout(0.5)
+        connected = False
+        while not connected:
+            try:
+                sock.connect((cfg['pi_ip'], 8485))
+                connected = True
+
+            except: pass        
+
+        con = sock.makefile('wb')
+        con.write(data)
+        con.flush()
+        con.close()
+        print("Pi stream started!")
+
+    def run(self):
+        # start the threads
         self.img_thread.start()
         self.bno_thread.start()
         self.dis_thread.start()
 
-    def shutdown(self):
-        # - dummy function to wait for cleanup
+        # waits for threads to finish and then performs cleanup
         self.img_thread.join()
         self.bno_thread.join()
         self.dis_thread.join()
 
+        # tell the pi to stop
+        msg = "STOP"
+        data = struct.pack("<4s", msg.encode('UTF-8'))
+
+        sock = socket.socket()
+        sock.settimeout(0.5)
+        connected = False
+        while not connected:
+            try:
+                sock.connect((self.cfg['pi_ip'], 8485))
+                connected = True
+
+            except: pass        
+
+        con = sock.makefile('wb')
+        con.write(data)
+        con.flush()
+        con.close()
+        
     def handler(self, signum, frame):
         # - ctrl-c handler to start process cleanup
-        sh_flag = sm.SharedMemory(self.sm_names[-1])
-        running = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
-        running[0] = False
-        sh_flag.close()
+        self.running[0] = False
 
-    def handle_img_read(self):
+    def handle_img_read(self, fname):
         # - parses all image data coming from the pi and stores it
         # - into shared memory. Uses protected writes to make sure
         # - race conditions are avoided
-    
-        # setup running flag 
-        sh_flag = sm.SharedMemory(self.sm_names[-1])
-        running = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
 
         # setup socket
         sock = socket.socket()
-        sock.setblocking(0)
         sock.settimeout(0.5)
-        sock.bind(('0.0.0.0', self.ports[0]))
+        sock.bind(('0.0.0.0', self.c_port))
         sock.listen(0)
         
         connected = False
-        while running[0] and not connected:
+        while self.running[0] and not connected:
             try:
                 img_connection = sock.accept()[0].makefile('rb')
                 connected = True
             
             except: pass
 
-        while running[0]:
+        while self.running[0]:
             # read image size
             try: data = img_connection.read(struct.calcsize('<L'))
             except: data = None
@@ -138,7 +186,6 @@ class _Rcv:
                 self.img_stamp[0] = img_stamp       
                 self.lock_img.release()
 
-        sh_flag.close()
         self.sh_img.close()
         self.sh_img_stamp.close()
 
@@ -151,13 +198,9 @@ class _Rcv:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(0)
         sock.settimeout(0.5)        
-        sock.bind(('0.0.0.0', self.ports[1]))
-
-        # setup running flag 
-        sh_flag = sm.SharedMemory(self.sm_names[-1])
-        running = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
+        sock.bind(('0.0.0.0', self.b_port))
         
-        while running[0]:
+        while self.running[0]:
             try: data, _ = sock.recvfrom(88)
             except: data = None
 
@@ -178,7 +221,6 @@ class _Rcv:
                     self.bno_stamp[0] = new_bno[-1]
                     self.lock_bno.release()
                 
-        sh_flag.close()
         self.sh_bno.close()
         self.sh_bno_stamp.close()
         
@@ -191,13 +233,9 @@ class _Rcv:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(0)
         sock.settimeout(0.5)        
-        sock.bind(('0.0.0.0', self.ports[2]))
+        sock.bind(('0.0.0.0', self.d_port))
 
-        # setup running flag 
-        sh_flag = sm.SharedMemory(self.sm_names[-1])
-        running = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
-
-        while running[0]:
+        while self.running[0]:
             try: data, _ = sock.recvfrom(16)
             except: data = None
 
@@ -215,7 +253,6 @@ class _Rcv:
                     self.dis_stamp[0] = new_dis[1]
                     self.lock_dis.release()
 
-        sh_flag.close()
         self.sh_dis.close()
         self.sh_dis_stamp.close()
 

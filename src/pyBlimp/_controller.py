@@ -14,13 +14,13 @@ from pyBlimp.utils import *
 from scipy.spatial.transform import Rotation as R
 
 
-def handle_controller(id_num, pi_ports, im_sz, ser, locks, names, logger):
+def handle_controller(ser, cfg, locks, names, logger):
     """ private controller handler spawned by a parent Blimp object
         - this handle should NOT be used by an application
         - only spawned and controlled by a parent Blimp object    
     """
-    C = _Controller(id_num, pi_ports, im_sz, ser, locks, names, logger)
-    C.loop()
+    C = _Controller(ser, cfg, locks, names, logger)
+    C.run()
 
 
 class _Controller:
@@ -29,8 +29,9 @@ class _Controller:
         - only spawned and controlled by a parent Blimp object    
     """
 
-    def __init__(self, id_num, pi_ports, im_sz, ser, locks, names, logger=False):
-        self.id_num = id_num
+    def __init__(self, ser, cfg, locks, names, logger=False):
+        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)
+        self.id_num = cfg['id_num']
         self.logger = logger
         self.hz = 100.
 
@@ -69,7 +70,7 @@ class _Controller:
         self.run = np.ndarray(1, dtype=np.bool_, buffer=self.sh_run.buf)
 
         # setup sensing tools (and sleep to read some data)
-        self.pi = MultiRcv(pi_ports, im_sz)
+        self.pi = MultiRcv(cfg)
         
         # construct lowest-level PID controllers
         self.positive_only = True
@@ -98,7 +99,7 @@ class _Controller:
         self.run[0] = False
 
     # main loop
-    def loop(self):
+    def run(self):
         # - main control loop that runs at a desired frequency
         # - and executes the angle controller at a high rate
         # - and handles the associated shutdown

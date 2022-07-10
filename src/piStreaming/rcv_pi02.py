@@ -11,9 +11,8 @@ class MultiRcv:
         - Sensor handling is run on a separate process with shared memory    
     """
 
-    def __init__(self, ports, im_sz):
-        # pi UDP ports, 3 tuple, each value is an int
-        self.ports = ports
+    def __init__(self, cfg):
+        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)
 
         # create shared memory for mp
         self.sh_img = sm.SharedMemory(create=True, size=np.prod(im_sz))
@@ -52,7 +51,7 @@ class MultiRcv:
 
         locks = (self.lock_img, self.lock_bno, self.lock_dis)
 
-        args = (ports, im_sz, names, locks)
+        args = (cfg, names, locks)
         self.psensor = mp.Process(target=handle_sensors, args=args)
 
         # start the process

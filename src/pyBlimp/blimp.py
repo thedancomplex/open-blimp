@@ -7,15 +7,14 @@ from pyBlimp._controller import handle_controller
 from pyBlimp.utils import *
 
 class Blimp:
-    def __init__(self, ser, id_num=None, ports=[8485, 8486, 8487], logger=False):
+    def __init__(self, ser, cfg, logger=False):
         """ Main interfacing class for a user to control a single blimp
             - ser is a serial object produced from pySerial
-            - id_num is unique id used for multicasting, if not multicasting
-            - leave as None
+            - cfg is a dict containing parameters for starting the blimp
         """
         
         # define incoming image size
-        im_sz = (240, 360, 3)
+        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)
 
         # setup shared memory state (1-z, 4-quat, 3-euler, 3-linear accel)
         self.lock_x = mp.Lock()
@@ -67,7 +66,7 @@ class Blimp:
                  self.sh_img_stamp.name, self.sh_des.name, self.sh_rot0.name,
                  self.sh_man.name, self.sh_cmd.name, self.sh_run.name)
 
-        args = (id_num, ports, im_sz, ser, locks, names, logger)
+        args = (ser, cfg, locks, names, logger)
 
         self.pcontroller = mp.Process(target=handle_controller, args=args)
         self.pcontroller.start()
