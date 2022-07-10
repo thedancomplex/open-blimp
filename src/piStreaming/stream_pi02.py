@@ -1,5 +1,6 @@
 #!/usr/bin/env/python3
 import multiprocessing as mp
+import numpy as np
 import signal
 import socket
 import struct
