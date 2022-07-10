@@ -30,13 +30,14 @@ class MultiStream:
         self.running = False
 
     def run(self):
+        sock = socket.socket()
+        sock.bind(('0.0.0.0', 8485))
+        sock.listen(0)
+        sock.settimeout(2)
+
         # wait for a start signal
         while self.running:
             # setup the socket for listening
-            sock = socket.socket()
-            sock.bind(('0.0.0.0', 8485))
-            sock.settimeout(2)
-            sock.listen(0)
 
             # wait for a request
             connected = False
@@ -103,8 +104,8 @@ class MultiStream:
                 print("Connected to", ip)
 
             # close the socket in preparation for a new request
-            sock.shutdown()
-            sock.close()
+            #sock.shutdown()
+            #sock.close()
 
         # shutdown operations
         self.flag[0] = False
