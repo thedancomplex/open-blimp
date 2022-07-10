@@ -112,8 +112,8 @@ class _Rcv:
         self.dis_thread.join()
 
         # tell the pi to stop
-        msg = "STOP"
-        data = struct.pack("<4s", msg.encode('UTF-8'))
+        msg = "STOP0000000"
+        data = struct.pack("<11s", msg.encode('UTF-8'))
 
         connected, tries = False, 0
         while not connected and tries < num_tries:

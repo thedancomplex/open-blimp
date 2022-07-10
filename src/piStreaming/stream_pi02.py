@@ -52,7 +52,7 @@ class MultiStream:
             # read in the parameters to start
             data = []
             if connected:
-                try: data = con.read()
+                try: data = con.read(11)
                 except: pass
 
             # if stop signal is read, set flag and stop
@@ -72,6 +72,19 @@ class MultiStream:
 
             if nbytes == 11:
                 # parse data
+                msg = str(data)[2:][:-1]
+            
+                # check if correct message
+                if msg == 'STOP0000000': 
+                    self.flag[0] = False
+                    print("Stop heard! Ending streams")
+
+                    # wait for processes to finish before resetting
+                    if self.pcam is not None: self.pcam.join()
+                    if self.pbno is not None: self.pbno.join()
+                    if self.pdis is not None: self.pdis.join()
+
+
                 # - 1 byte id_num, 4 bytes IP, 4 bytes img size, 1 byte fps, 1 byte quality 
                 id_data = data[0]
                 ip_data = data[1:5]
