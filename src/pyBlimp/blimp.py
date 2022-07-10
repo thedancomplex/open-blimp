@@ -14,7 +14,7 @@ class Blimp:
         """
         
         # define incoming image size
-        im_sz = (cfg['im_cols'], cfg['im_rows'], 3)
+        im_sz = (cfg['im_rows'], cfg['im_cols'], 3)
 
         # setup shared memory state (1-z, 4-quat, 3-euler, 3-linear accel)
         self.lock_x = mp.Lock()

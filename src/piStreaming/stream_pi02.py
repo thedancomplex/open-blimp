@@ -183,20 +183,26 @@ class MultiStream:
             # get the current time
             tframe = time.time() - self.t0
 
-            # write the length of the capture
-            buf_len = struct.pack('<L', buf.tell())
-            cam_connection.write(buf_len)
-            cam_connection.flush()
+            try:
+                # write the length of the capture
+                buf_len = struct.pack('<L', buf.tell())
+                cam_connection.write(buf_len)
+                cam_connection.flush()
 
-            # write the image data
-            buf.seek(0)
-            cam_connection.write(buf.read())
-            cam_connection.flush()
+                # write the image data
+                buf.seek(0)
+                cam_connection.write(buf.read())
+                cam_connection.flush()
 
-            # write the current time
-            tbuf = struct.pack('<d', tframe)
-            cam_connection.write(tbuf)
+                # write the current time
+                tbuf = struct.pack('<d', tframe)
+                cam_connection.write(tbuf)
+                cam_connection.flush()
 
+            except: 
+                print("Broken image pipe!")
+                break
+                
             # delete buffer
             buf.seek(0)
             buf.truncate()
@@ -205,7 +211,7 @@ class MultiStream:
         cam_connection.close()
         sh_flag.close()
         cam.close()
-        
+
     def handle_bno(self, ip, port, fname):
         # see if BNO055 libs are installed
         try:
