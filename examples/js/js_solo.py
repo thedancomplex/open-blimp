@@ -5,15 +5,18 @@ import time
 import traceback
 
 from pyBlimp.blimp import Blimp
-from pyBlimp.utils import wrap, create_serial
+from pyBlimp.utils import *
 from utils.js_utils import JoyStick_helper
 
 
 # create serial device and lock pair
-ser = create_serial("/dev/ttyUSB1")
+ser = create_serial("/dev/ttyUSB0")
+
+# load desired configs
+cfg = read_config("config.yaml")
 
 # build the blimp object
-b = Blimp(ser, id_num=1, ports=(1111, 1112, 1113), logger=False)
+b = Blimp(ser, cfg, logger=False)
 
 # setup the joystick reader
 js = JoyStick_helper()

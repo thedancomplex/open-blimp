@@ -1,0 +1,12 @@
+# IP address for the pi and base station on the shared network
+my_ip: "192.168.0.104"
+pi_ip: "192.168.0.51"
+
+# Blimp unique ID
+id_num: 1
+
+# camera parameters
+im_rows: 240
+im_cols: 360
+fps: 20
+qual: 20
