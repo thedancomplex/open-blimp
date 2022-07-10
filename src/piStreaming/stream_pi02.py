@@ -203,7 +203,7 @@ class MultiStream:
                 # if the cam connection fails for some reason
                 print("Broken image pipe!")
                 sh_flag.close()
-                cam.close()
+                #cam.close()
                 return
                 
             # delete buffer
