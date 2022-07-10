@@ -42,9 +42,13 @@ class MultiStream:
             connected = False
             print("Waiting for connection...")
             while not connected and self.running:
-                try: con, connected = sock.accept()[0].makefile('rb'), True
+                try: 
+                    con = sock.accept()[0].makefile('rb')
+                    connected = True
+
                 except: pass
-                
+            
+            print("Connected!")
             # read in the parameters to start
             data = []
             if connected:
