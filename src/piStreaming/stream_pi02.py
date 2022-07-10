@@ -215,7 +215,8 @@ class MultiStream:
         # setup the bno055
         sensor = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
         sensor.set_mode(8) # 8- IMU mode, 12 - NDOF mode
-        
+        bno.begin()
+
         # setup shared memory flag
         sh_flag = sm.SharedMemory(fname)
         flag = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
