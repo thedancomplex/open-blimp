@@ -119,8 +119,8 @@ class MultiStream:
         if self.pdis is not None:
             self.pdis.join()
 
-        self.flag[0].close()
-        self.flag[0].unlink()
+        self.sh_flag.close()
+        self.sh_flag.unlink()
 
     def handle_cam(self, ip, port, res, fps, q, fname):
         # see if camera libs are installed
