@@ -187,6 +187,7 @@ class MultiStream:
             return
         
         # setup shared memory
+        print(names)
         sh_t0 = sm.SharedMemory(names[0])
         sh_ip = sm.SharedMemory(names[1])
         sh_port = sm.SharedMemory(names[2])
@@ -306,6 +307,7 @@ class MultiStream:
         print("BNO055 successfully registered")
 
         # setup shared memory
+        print(names)
         sh_t0 = sm.SharedMemory(names[0])
         sh_ip = sm.SharedMemory(names[1])
         sh_port = sm.SharedMemory(names[2])
@@ -347,6 +349,8 @@ class MultiStream:
                 bno_bytes = struct.pack("<11d", *bno_packet)
                 sock.sendto(bno_bytes, (ip_, port_))
 
+            else: time.sleep(1)
+            
         # cleanup
         sock.close()
         sh_t0.close()
@@ -366,6 +370,7 @@ class MultiStream:
             return
 
         # setup shared memory
+        print(names)
         sh_t0 = sm.SharedMemory(names[0])
         sh_ip = sm.SharedMemory(names[1])
         sh_port = sm.SharedMemory(names[2])
@@ -424,6 +429,7 @@ class MultiStream:
             # low-power mode
             else:
                 if last_flag != flag[0]: vl53.stop_ranging()
+                time.sleep(1)
 
             last_flag = flag[0]
 
