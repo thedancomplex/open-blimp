@@ -307,7 +307,6 @@ class MultiStream:
         print("BNO055 successfully registered")
 
         # setup shared memory
-        print(names)
         sh_t0 = sm.SharedMemory(names[0])
         sh_ip = sm.SharedMemory(names[1])
         sh_port = sm.SharedMemory(names[2])
@@ -318,27 +317,27 @@ class MultiStream:
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
-        locks[0].acquire()
-        t0_ = t0[0]
-        locks[0].release()
-
-        locks[1].acquire()
-        ip_ = ip[:]
-        locks[1].release()                
-        ip_ = ".".join(map(str, ip_))
-
-        locks[2].acquire()
-        port_ = port[:]
-        locks[2].release()                
-        print(ip_, port_)
-
         # setup the socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # shutdown flag
         while flag[1]:
+            locks[0].acquire()
+            t0_ = t0[0]
+            locks[0].release()
+
+            locks[1].acquire()
+            ip_ = ip[:]
+            locks[1].release()                
+            ip_ = ".".join(map(str, ip_))
+
+            locks[2].acquire()
+            port_ = port[:]
+            locks[2].release()                
+            print(ip_, port_)
+
             # active flag
-            if flag[0]:
+            while flag[0]:
                 quat = sensor.read_quaternion()
                 gyro = sensor.read_gyroscope()
                 acc  = sensor.read_linear_acceleration()
@@ -349,7 +348,7 @@ class MultiStream:
                 bno_bytes = struct.pack("<11d", *bno_packet)
                 sock.sendto(bno_bytes, (ip_, port_))
 
-            else: time.sleep(1)
+            time.sleep(1)
             
         # cleanup
         sock.close()
@@ -380,20 +379,6 @@ class MultiStream:
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
-        locks[0].acquire()
-        t0_ = t0[0]
-        locks[0].release()
-
-        locks[1].acquire()
-        ip_ = ip[:]
-        locks[1].release()                
-        ip_ = ".".join(map(str, ip_))
-
-        locks[2].acquire()
-        port_ = port[:]
-        locks[2].release()                
-        print(ip_, port_)
-
         # setup the socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -407,8 +392,22 @@ class MultiStream:
         # shutdown flag
         last_flag = not flag[0]
         while flag[1]:
+            locks[0].acquire()
+            t0_ = t0[0]
+            locks[0].release()
+
+            locks[1].acquire()
+            ip_ = ip[:]
+            locks[1].release()                
+            ip_ = ".".join(map(str, ip_))
+
+            locks[2].acquire()
+            port_ = port[:]
+            locks[2].release()                
+            print(ip_, port_)
+
             # active flag
-            if flag[0]:
+            while flag[0]:
                 if last_flag != flag[0]: vl53.start_ranging()
 
                 if vl53.data_ready:
@@ -426,11 +425,9 @@ class MultiStream:
                 time.sleep(0.02)
 
             # low-power mode
-            else:
-                if last_flag != flag[0]: vl53.stop_ranging()
-                time.sleep(1)
-
+            if last_flag != flag[0]: vl53.stop_ranging()
             last_flag = flag[0]
+            time.sleep(1)
 
         # cleanup
         sock.close()
