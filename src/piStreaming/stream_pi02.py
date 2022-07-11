@@ -210,11 +210,12 @@ class MultiStream:
                 ip_ = ip[:]
                 locks[1].release()                
                 ip_ = ".".join(map(str, ip_))
-                
+
                 locks[2].acquire()
                 port_ = port[:]
                 locks[2].release()                
-                
+                print(ip_, port_)
+
                 try:
                     sock.connect((ip_, port_))
                     connected = True
@@ -323,10 +324,11 @@ class MultiStream:
         ip_ = ip[:]
         locks[1].release()                
         ip_ = ".".join(map(str, ip_))
-        
+
         locks[2].acquire()
         port_ = port[:]
         locks[2].release()                
+        print(ip_, port_)
 
         # setup the socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -341,7 +343,6 @@ class MultiStream:
                 tframe = time.time() - t0_
 
                 bno_packet = quat + gyro + acc + (tframe,)
-                print(bno_packet); print(ip_, port_)
                 
                 bno_bytes = struct.pack("<11d", *bno_packet)
                 sock.sendto(bno_bytes, (ip_, port_))
@@ -383,10 +384,11 @@ class MultiStream:
         ip_ = ip[:]
         locks[1].release()                
         ip_ = ".".join(map(str, ip_))
-        
+
         locks[2].acquire()
         port_ = port[:]
         locks[2].release()                
+        print(ip_, port_)
 
         # setup the socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
