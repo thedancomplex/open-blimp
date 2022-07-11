@@ -161,7 +161,7 @@ class _Rcv:
             # read image size
             try: data = img_connection.read(struct.calcsize('<L'))
             except: data = None
-                
+            print("running!", len(data))                
             # parse the data if available
             if data is not None:
                 # ignore if wrong size
