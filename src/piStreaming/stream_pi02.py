@@ -354,6 +354,7 @@ class MultiStream:
 
                 last_flag = flag[0]
 
+            last_flag = flag[0]
             time.sleep(1)
             
         # cleanup
