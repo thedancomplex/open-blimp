@@ -79,13 +79,13 @@ class MultiStream:
         self.pbno.start()
         self.pdis.start()
 
-        # setup the socket for listening
-        sock = socket.socket()
-        sock.bind(('0.0.0.0', 8485))
-        sock.listen(0)
-        sock.settimeout(0.5)
-
         while self.running:
+            # setup the socket for listening
+            sock = socket.socket()
+            sock.bind(('0.0.0.0', 8485))
+            sock.listen(0)
+            sock.settimeout(0.5)
+
             # wait for a request
             connected = False
             while not connected and self.running:
@@ -146,8 +146,8 @@ class MultiStream:
                     print("Connected to", ".".join(map(str, ip)))
 
             # close the socket in preparation for a new request
-            #print("Closed socket!")
-            #sock.close()
+            print("Closed socket!")
+            sock.close()
 
         # shutdown operations
         print("Shutting down!")
