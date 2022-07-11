@@ -6,7 +6,7 @@ pi_ip: "192.168.186.1"
 id_num: 1
 
 # camera parameters
-im_rows: 240
-im_cols: 360
+im_rows: 640 #240
+im_cols: 720 #360
 fps: 20
 qual: 20

@@ -119,7 +119,6 @@ class _Rcv:
         sock.settimeout(0.5)
         connected, tries = False, 0
         while not connected and tries < num_tries:
-            print("Trying to connect 2")
             try:
                 sock.connect((self.cfg['pi_ip'], 8485))
                 connected = True
@@ -195,6 +194,7 @@ class _Rcv:
                 self.img_stamp[0] = img_stamp       
                 self.lock_img.release()
 
+        sock.close()
         self.sh_img.close()
         self.sh_img_stamp.close()
         
@@ -229,7 +229,8 @@ class _Rcv:
                     self.bno[:] = new_bno[:-1]
                     self.bno_stamp[0] = new_bno[-1]
                     self.lock_bno.release()
-                
+        
+        sock.close()
         self.sh_bno.close()
         self.sh_bno_stamp.close()
         
@@ -262,6 +263,7 @@ class _Rcv:
                     self.dis_stamp[0] = new_dis[1]
                     self.lock_dis.release()
 
+        sock.close()
         self.sh_dis.close()
         self.sh_dis_stamp.close()
 

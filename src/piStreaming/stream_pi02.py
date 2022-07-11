@@ -230,7 +230,7 @@ class MultiStream:
             locks[3].release()
             
             res, fps, q = params_[:2], params_[2], params_[3]
-            
+            print(res)
             cam = PiCamera()
             cam.resolution = res
             cam.framerate = fps
