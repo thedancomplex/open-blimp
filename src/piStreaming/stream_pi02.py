@@ -149,8 +149,9 @@ class MultiStream:
             #sock.close()
 
         # shutdown operations
+        print("Shutting down!")
         sock.close()
-        self.flag[1] = False
+        self.flag[:] = False
         if self.pcam is not None:
             self.pcam.join()
             
@@ -187,7 +188,6 @@ class MultiStream:
             return
         
         # setup shared memory
-        print(names)
         sh_t0 = sm.SharedMemory(names[0])
         sh_ip = sm.SharedMemory(names[1])
         sh_port = sm.SharedMemory(names[2])
@@ -370,7 +370,6 @@ class MultiStream:
             return
 
         # setup shared memory
-        print(names)
         sh_t0 = sm.SharedMemory(names[0])
         sh_ip = sm.SharedMemory(names[1])
         sh_port = sm.SharedMemory(names[2])
