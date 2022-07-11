@@ -124,7 +124,7 @@ class MultiStream:
                     self.ip[:] = ip
                     self.ip_lock.release()
 
-                    id_num = data[0]; print(id_num)
+                    id_num = data[0]
                     self.c_lock.acquire()                    
                     self.c_port[:] = 1024 + 3*(id_num-1)
                     self.c_lock.release()                    
@@ -285,6 +285,7 @@ class MultiStream:
             # prep for next call
             print("Closing camera")
             cam.close()
+            cam_connection.close()
             sock.close()
             sock = socket.socket()
             sock.settimeout(1)
