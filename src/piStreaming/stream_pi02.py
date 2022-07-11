@@ -147,8 +147,8 @@ class MultiStream:
                     print("Connected to", ".".join(map(str, ip)))
 
             # close the socket in preparation for a new request
-            #print("Closed socket!")
-            #sock.close()
+            print("Closed socket!")
+            con.close()
 
         # shutdown operations
         print("Shutting down!")
