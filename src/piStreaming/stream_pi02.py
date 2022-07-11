@@ -205,14 +205,14 @@ class MultiStream:
             # connect to the server
             connected = False
             while not connected and flag[0]:
-                lock[1].acquire()
+                locks[1].acquire()
                 ip_ = ip[:]
-                lock[1].release()                
+                locks[1].release()                
                 ip_ = ".".join(map(str, ip_))
                 
-                lock[2].acquire()
+                locks[2].acquire()
                 port_ = port[:]
-                lock[2].release()                
+                locks[2].release()                
                 
                 try:
                     sock.connect((ip_, port_))
@@ -225,9 +225,9 @@ class MultiStream:
                 continue
 
             # setup the camera
-            lock[3].acquire()
+            locks[3].acquire()
             params_ = params[:]        
-            lock[3].release()
+            locks[3].release()
             
             res, fps, q = params_[:2], params_[2], params_[3]
             
@@ -240,9 +240,9 @@ class MultiStream:
             cam_connection = sock.makefile('wb')
 
             # start the camera stream
-            lock[0].acquire()
+            locks[0].acquire()
             t0_ = t0[0]
-            lock[0].release()
+            locks[0].release()
 
             buf = BytesIO()
             for _ in cam.capture_continuous(buf, format="jpeg", quality=q, use_video_port=True):
@@ -315,18 +315,18 @@ class MultiStream:
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
-        lock[0].acquire()
+        locks[0].acquire()
         t0_ = t0[0]
-        lock[0].release()
+        locks[0].release()
 
-        lock[1].acquire()
+        locks[1].acquire()
         ip_ = ip[:]
-        lock[1].release()                
+        locks[1].release()                
         ip_ = ".".join(map(str, ip_))
         
-        lock[2].acquire()
+        locks[2].acquire()
         port_ = port[:]
-        lock[2].release()                
+        locks[2].release()                
 
         # setup the socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -372,18 +372,18 @@ class MultiStream:
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
 
-        lock[0].acquire()
+        locks[0].acquire()
         t0_ = t0[0]
-        lock[0].release()
+        locks[0].release()
 
-        lock[1].acquire()
+        locks[1].acquire()
         ip_ = ip[:]
-        lock[1].release()                
+        locks[1].release()                
         ip_ = ".".join(map(str, ip_))
         
-        lock[2].acquire()
+        locks[2].acquire()
         port_ = port[:]
-        lock[2].release()                
+        locks[2].release()                
 
         # setup the socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
