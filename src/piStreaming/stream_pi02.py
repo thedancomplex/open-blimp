@@ -137,9 +137,9 @@ class MultiStream:
                     self.p_lock.release()
                     
                     # start streams
-                    self.t0_lock.acquire()
+                    self.t_lock.acquire()
                     self.t0[0] = time.time()
-                    self.t0_lock.release()                    
+                    self.t_lock.release()                    
                     self.flag[0] = True
 
                     print("Connected to", ip)
