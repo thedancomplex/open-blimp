@@ -348,7 +348,7 @@ class MultiStream:
                 bno_packet = quat + gyro + acc + (tframe,)
                 
                 bno_bytes = struct.pack("<11d", *bno_packet)
-                sock.sendto(bno_bytes, (ip_, port_))
+                sock.sendto(bno_bytes, (ip_, port_[0]))
 
             time.sleep(1)
             
@@ -416,13 +416,11 @@ class MultiStream:
                     distance = vl53.distance
                     vl53.clear_interrupt()
 
-                    if distance is not None:
-                        
-                    
+                    if distance is not None:          
                         tframe = time.time() - self.t0
                         dist_packet = (distance, tframe)
                         dist_bytes = struct.pack("<2d", *dist_packet)
-                        sock.sendto(dist_bytes, (ip, port))
+                        sock.sendto(dist_bytes, (ip_, port_[0]))
 
                 time.sleep(0.02)
 
