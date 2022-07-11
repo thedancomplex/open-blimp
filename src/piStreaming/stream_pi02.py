@@ -215,7 +215,7 @@ class MultiStream:
             connected = False
             while not connected and flag[0]:
                 try:
-                    sock.connect((ip_, port_))
+                    sock.connect((ip_, port_[0]))
                     connected = True
 
                 except: pass
@@ -352,7 +352,7 @@ class MultiStream:
 
             last_flag = flag[0]
             time.sleep(1)
-            
+            print("BNO Sleep!")            
         # cleanup
         sock.close()
         sh_t0.close()
@@ -430,6 +430,7 @@ class MultiStream:
             if last_flag != flag[0]: vl53.stop_ranging()
             last_flag = flag[0]            
             time.sleep(1)
+            print("VL Sleep!")
 
         # cleanup
         sock.close()
