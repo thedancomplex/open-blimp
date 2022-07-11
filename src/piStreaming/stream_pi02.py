@@ -105,7 +105,7 @@ class MultiStream:
             if len(data) == 11:
                 # parse data
                 msg = str(data)[2:][:-1]
-            
+                print(str(data))
                 # check if correct message
                 if msg == 'SLEEP000000': 
                     self.flag[0] = False
@@ -213,7 +213,6 @@ class MultiStream:
             locks[2].acquire()
             port_ = port[:]
             locks[2].release()                
-            print("Cam:", ip_, port_)
 
             # connect to the server
             connected = False
@@ -323,6 +322,7 @@ class MultiStream:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # shutdown flag
+        last_flag = not flag[0]
         while flag[1]:
             locks[0].acquire()
             t0_ = t0[0]
@@ -336,10 +336,12 @@ class MultiStream:
             locks[2].acquire()
             port_ = port[:]
             locks[2].release()                
-            print("BNO:", ip_, port_)
 
             # active flag
             while flag[0]:
+                if last_flag != flag[0]:
+                    print("BNO055 successfully registered")
+
                 quat = sensor.read_quaternion()
                 gyro = sensor.read_gyroscope()
                 acc  = sensor.read_linear_acceleration()
@@ -349,6 +351,7 @@ class MultiStream:
                 
                 bno_bytes = struct.pack("<11d", *bno_packet)
                 sock.sendto(bno_bytes, (ip_, port_[0]))
+                last_flag = flag[0]
 
             time.sleep(1)
             
@@ -389,7 +392,6 @@ class MultiStream:
         vl53 = adafruit_vl53l1x.VL53L1X(i2c)
         vl53.distance_mode = 2
         vl53.timing_budget = 100
-        print("VL53L1X successfully registered")
 
         # shutdown flag
         last_flag = not flag[0]
@@ -406,11 +408,12 @@ class MultiStream:
             locks[2].acquire()
             port_ = port[:]
             locks[2].release()                
-            print("VL53", ip_, port_)
 
             # active flag
             while flag[0]:
-                if last_flag != flag[0]: vl53.start_ranging()
+                if last_flag != flag[0]: 
+                    vl53.start_ranging()
+                    print("VL53L1X successfully registered")
 
                 if vl53.data_ready:
                     distance = vl53.distance

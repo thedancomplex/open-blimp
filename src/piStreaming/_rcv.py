@@ -112,7 +112,7 @@ class _Rcv:
         self.dis_thread.join()
 
         # tell the pi to stop
-        msg = "STOP0000000"
+        msg = "SLEEP000000"
         data = struct.pack("<11s", msg.encode('UTF-8'))
 
         connected, tries = False, 0
