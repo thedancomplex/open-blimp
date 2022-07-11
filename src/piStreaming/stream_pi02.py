@@ -74,6 +74,11 @@ class MultiStream:
         self.running = False
 
     def run(self):
+        # setup the socket for listening
+        sock = socket.socket()
+        sock.bind(('0.0.0.0', 8485))
+        sock.settimeout(0.5)
+        sock.listen(0)
 
         # start the processes
         self.pcam.start()
@@ -81,11 +86,6 @@ class MultiStream:
         self.pdis.start()
 
         while self.running:
-            # setup the socket for listening
-            sock = socket.socket()
-            sock.bind(('0.0.0.0', 8485))
-            sock.settimeout(0.5)
-            sock.listen(0)
 
             # wait for a request
             connected = False
@@ -147,8 +147,8 @@ class MultiStream:
                     print("Connected to", ".".join(map(str, ip)))
 
             # close the socket in preparation for a new request
-            print("Closed socket!")
-            con.close()
+            #print("Closed socket!")
+            #con.close()
 
         # shutdown operations
         print("Shutting down!")
