@@ -77,7 +77,7 @@ class MultiStream:
         # setup the socket for listening
         sock = socket.socket()
         sock.bind(('0.0.0.0', 8485))
-        sock.settimeout(0.5)
+        sock.settimeout(2)
         sock.listen(0)
 
         # start the processes
@@ -86,7 +86,6 @@ class MultiStream:
         self.pdis.start()
 
         while self.running:
-
             # wait for a request
             connected = False
             while not connected and self.running:
@@ -94,7 +93,7 @@ class MultiStream:
                     con = sock.accept()[0].makefile('rb')
                     connected = True
 
-                except: pass
+                except: print("Listening for connections...")
             
             data = []
             if connected:
@@ -269,11 +268,7 @@ class MultiStream:
                     cam_connection.write(tbuf)
                     cam_connection.flush()
 
-                except: 
-                    # if the cam connection fails for some reason
-                    print("Broken image pipe!")
-                    cam.close()
-                    break
+                except: break
                     
                 # delete buffer
                 buf.seek(0)
@@ -352,7 +347,7 @@ class MultiStream:
 
             last_flag = flag[0]
             time.sleep(1)
-            print("BNO Sleep!")            
+
         # cleanup
         sock.close()
         sh_t0.close()
@@ -430,7 +425,6 @@ class MultiStream:
             if last_flag != flag[0]: vl53.stop_ranging()
             last_flag = flag[0]            
             time.sleep(1)
-            print("VL Sleep!")
 
         # cleanup
         sock.close()
