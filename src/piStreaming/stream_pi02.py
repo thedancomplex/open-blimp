@@ -60,7 +60,7 @@ class MultiStream:
         # setup the processes
         c_names = (t0_name, ip_name, cp_name, pa_name, fl_name)
         c_locks = (self.t_lock, self.ip_lock, self.c_lock, self.p_lock)
-        self.pcam = mp.Process(target=self.handle_cam, args=c_args)
+        self.pcam = mp.Process(target=self.handle_cam, args=(c_names, c_locks))
 
         b_names = (t0_name, ip_name, bp_name, fl_name)
         b_locks = (self.t_lock, self.ip_lock, self.c_lock)
