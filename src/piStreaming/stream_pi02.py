@@ -5,7 +5,7 @@ import signal
 import socket
 import struct
 import time
-import traceback
+
 from multiprocessing import shared_memory as sm
 
 
@@ -235,7 +235,7 @@ class MultiStream:
             locks[3].release()
             
             res, fps, q = params_[:2], params_[2], params_[3]
-            print(res)
+
             cam = PiCamera()
             cam.resolution = res
             cam.framerate = fps
@@ -273,7 +273,7 @@ class MultiStream:
                     cam_connection.write(tbuf)
                     cam_connection.flush()
 
-                except: traceback.print_exc(); break
+                except: break
                     
                 # delete buffer
                 buf.seek(0)

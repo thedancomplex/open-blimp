@@ -180,7 +180,7 @@ class _Rcv:
 
                 # parse image
                 nparr = np.frombuffer(image_stream.read(), np.uint8)
-                imgBGR = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED); print(imgBGR)
+                imgBGR = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
                 img = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
 
                 # read current time
