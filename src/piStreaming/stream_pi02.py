@@ -419,7 +419,7 @@ class MultiStream:
 
             # low-power mode
             else:
-                if last_flag != flag: vl53.stop_ranging()
+                if last_flag != flag[0]: vl53.stop_ranging()
 
             last_flag = flag[0]
 
