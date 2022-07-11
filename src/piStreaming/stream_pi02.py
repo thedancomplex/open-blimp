@@ -205,19 +205,19 @@ class MultiStream:
 
         # shutdown flag
         while flag[1]:
+            locks[1].acquire()
+            ip_ = ip[:]
+            locks[1].release()                
+            ip_ = ".".join(map(str, ip_))
+
+            locks[2].acquire()
+            port_ = port[:]
+            locks[2].release()                
+            print("Cam:", ip_, port_)
+
             # connect to the server
             connected = False
             while not connected and flag[0]:
-                locks[1].acquire()
-                ip_ = ip[:]
-                locks[1].release()                
-                ip_ = ".".join(map(str, ip_))
-
-                locks[2].acquire()
-                port_ = port[:]
-                locks[2].release()                
-                print("Cam:", ip_, port_)
-
                 try:
                     sock.connect((ip_, port_))
                     connected = True
@@ -225,8 +225,7 @@ class MultiStream:
                 except: pass
 
             # return prematurely if stopped early
-            if not connected: 
-                continue
+            if not connected: continue
 
             # setup the camera
             locks[3].acquire()
