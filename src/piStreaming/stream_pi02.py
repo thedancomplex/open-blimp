@@ -272,12 +272,14 @@ class MultiStream:
                     tbuf = struct.pack('<d', tframe)
                     cam_connection.write(tbuf)
                     cam_connection.flush()
-
-                except: break
                     
-                # delete buffer
-                buf.seek(0)
-                buf.truncate()
+                    # delete buffer
+                    buf.seek(0)
+                    buf.truncate()
+
+                except:
+                    cam.close() 
+                    break
 
             # prep for next call
             cam.close()
