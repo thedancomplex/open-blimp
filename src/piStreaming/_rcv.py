@@ -82,7 +82,6 @@ class _Rcv:
         connected, tries = False, 0
 
         while not connected and tries < num_tries:
-            print("Trying to connect...")
             print(self.cfg['pi_ip'])
             try:
                 sock.connect((self.cfg['pi_ip'], 8485))
@@ -98,7 +97,7 @@ class _Rcv:
             print("Pi stream started!")
 
         else: 
-            print("EXIT")
+            print("Couldn't connect to ", self.cfg['pi_ip'])
             return
 
         # start the threads
@@ -196,7 +195,7 @@ class _Rcv:
         sock.close()
         self.sh_img.close()
         self.sh_img_stamp.close()
-        
+
     def handle_bno_read(self):
         # - parses all bno data coming from the pi and stores it
         # - into shared memory. Uses protected writes to make sure

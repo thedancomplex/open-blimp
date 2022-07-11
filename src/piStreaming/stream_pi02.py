@@ -88,17 +88,12 @@ class MultiStream:
         while self.running:
             # wait for a request
             connected = False
-            tries = 0
             while not connected and self.running:
                 try: 
                     con = sock.accept()[0].makefile('rb')
                     connected = True
 
-                except: 
-                    tries += 1
-                    if tries == 8:
-                        tries = 0
-                        print("Listening for connections...")
+                except: pass
             
             data = []
             if connected:
@@ -226,7 +221,6 @@ class MultiStream:
 
             # return prematurely if stopped early
             if not connected: 
-                print("Running...")
                 time.sleep(1)
                 continue
 
@@ -236,7 +230,7 @@ class MultiStream:
             locks[3].release()
             
             res, fps, q = params_[:2], params_[2], params_[3]
-            print("Connecting camera")
+
             cam = PiCamera()
             cam.resolution = res
             cam.framerate = fps
@@ -278,12 +272,9 @@ class MultiStream:
                     buf.truncate()
 
                 except:
-                    print("Error!")
-                    traceback.print_exc() 
                     break
 
             # prep for next call
-            print("Closing camera")
             cam.close()
             sock.close()
             sock = socket.socket()
