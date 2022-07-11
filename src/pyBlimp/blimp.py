@@ -71,8 +71,8 @@ class Blimp:
         self.pcontroller = mp.Process(target=handle_controller, args=args)
         self.pcontroller.start()
 
-        # set the zeros
-        time.sleep(0.5)        
+        # set the zeros (wait a bit to make sure data is available)
+        time.sleep(1.0)
         self.zero_xy_rot()
         self.zero_z_rot()
 
@@ -125,7 +125,7 @@ class Blimp:
     def get_euler(self):
         """ get the linear acceleration (without gravity)
             - returns in local blimp coordinate frame
-            - returns (ax, ay, az)
+            - returns (r, p, yw)
         """
         # protected read
         self.lock_x.acquire()
@@ -217,7 +217,7 @@ class Blimp:
         
         # protected read
         [r, p, _] = self.get_euler()
-                
+
         # protected write
         self.lock_rot0.acquire()
         self.rot0[:2] = [r, p]

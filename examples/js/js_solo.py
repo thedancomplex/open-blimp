@@ -4,7 +4,6 @@ import signal
 import time
 
 from pyBlimp.blimp import Blimp
-from pyBlimp.utils import *
 from utils.js_utils import JoyStick_helper
 
 
