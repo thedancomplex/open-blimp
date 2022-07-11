@@ -101,6 +101,7 @@ class MultiStream:
                 try: data = con.read(11)
                 except: pass
 
+            print(len(data))
             # if stop signal is read, go to sleep
             if len(data) == 11:
                 # parse data
