@@ -74,10 +74,6 @@ class MultiStream:
         self.running = False
 
     def run(self):
-        # setup the socket for listening
-        sock = socket.socket()
-        sock.bind(('0.0.0.0', 8485))
-        sock.settimeout(0.5)
 
         # start the processes
         self.pcam.start()
@@ -85,6 +81,10 @@ class MultiStream:
         self.pdis.start()
 
         while self.running:
+            # setup the socket for listening
+            sock = socket.socket()
+            sock.bind(('0.0.0.0', 8485))
+            sock.settimeout(0.5)
             sock.listen(0)
 
             # wait for a request
