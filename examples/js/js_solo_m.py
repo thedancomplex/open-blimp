@@ -3,21 +3,24 @@ import numpy as np
 import signal
 
 from pyBlimp.blimp import Blimp
-from pyBlimp.utils import wrap, create_serial
+from pyBlimp.utils import *
 from utils.js_utils import JoyStick_helper
 
 
 # create serial device and lock pair
-ser = create_serial("/dev/ttyUSB1")
+ser = create_serial("/dev/ttyUSB0")
+
+# load desired configs
+cfg = read_config("config.yaml")
 
 # build the blimp object
-b = Blimp(ser, id_num=1, ports=(1111, 1112, 1113), logger=False)
+b = Blimp(ser, cfg, logger=False)
 
 # setup the joystick reader
 js = JoyStick_helper()
 
 # show the FPV
-fig, axes = plt.subplots(1,1)
+#fig, axes = plt.subplots(1,1)
 
 # setup exit on ctrl-c
 running = True
@@ -49,7 +52,7 @@ while running:
         cmd[2] = -0.05*ax[2]
         cmd[3] = -0.05*ax[3]
         b.set_cmd(cmd)
-
+    """
     # show the video
     I = b.get_image()
     axes.clear()
@@ -59,8 +62,8 @@ while running:
     axes.set_title("FPV")
 
     plt.draw(); plt.pause(0.0001)
-
+    """
     # break if the figure is closed
-    if not plt.fignum_exists(fig.number): running = False
+    #if not plt.fignum_exists(fig.number): running = False
 
 b.shutdown()

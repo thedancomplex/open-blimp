@@ -7,7 +7,7 @@ from pyBlimp._controller import handle_controller
 from pyBlimp.utils import *
 
 class Blimp:
-    def __init__(self, ser, cfg, logger=False):
+    def __init__(self, ser, cfg, motors_only=False, logger=False):
         """ Main interfacing class for a user to control a single blimp
             - ser is a serial object produced from pySerial
             - cfg is a dict containing parameters for starting the blimp

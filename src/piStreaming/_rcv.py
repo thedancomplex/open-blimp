@@ -95,7 +95,7 @@ class _Rcv:
             sock.close()
 
         else: 
-            print("Couldn't connect to ", self.cfg['pi_ip'])
+            print("Couldn't connect to", self.cfg['pi_ip'])
             return
 
         # start the threads
