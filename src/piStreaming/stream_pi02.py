@@ -322,7 +322,7 @@ class MultiStream:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # shutdown flag
-        last_flag = not flag[0]
+        last_flag = flag[0]
         while flag[1]:
             locks[0].acquire()
             t0_ = t0[0]
@@ -351,6 +351,7 @@ class MultiStream:
                 
                 bno_bytes = struct.pack("<11d", *bno_packet)
                 sock.sendto(bno_bytes, (ip_, port_[0]))
+
                 last_flag = flag[0]
 
             time.sleep(1)
@@ -394,7 +395,7 @@ class MultiStream:
         vl53.timing_budget = 100
 
         # shutdown flag
-        last_flag = not flag[0]
+        last_flag = flag[0]
         while flag[1]:
             locks[0].acquire()
             t0_ = t0[0]
@@ -420,16 +421,17 @@ class MultiStream:
                     vl53.clear_interrupt()
 
                     if distance is not None:          
-                        tframe = time.time() - self.t0
+                        tframe = time.time() - t0_
                         dist_packet = (distance, tframe)
                         dist_bytes = struct.pack("<2d", *dist_packet)
                         sock.sendto(dist_bytes, (ip_, port_[0]))
 
                 time.sleep(0.02)
+                last_flag = flag[0]
 
             # low-power mode
             if last_flag != flag[0]: vl53.stop_ranging()
-            last_flag = flag[0]
+            last_flag = flag[0]            
             time.sleep(1)
 
         # cleanup
