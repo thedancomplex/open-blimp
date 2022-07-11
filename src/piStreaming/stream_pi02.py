@@ -115,8 +115,9 @@ class MultiStream:
                     # - 1 byte id_num, 4 bytes IP, 4 bytes img size, 1 byte fps, 1 byte quality 
 
                     # protected writes
+                    ip = struct.unpack("<4B", data[1:5])
                     self.ip_lock.acquire()
-                    self.ip[:] = struct.unpack("<4B", data[1:5])
+                    self.ip[:] = ip
                     self.ip_lock.release()
 
                     id_num = data[0]
@@ -142,7 +143,7 @@ class MultiStream:
                     self.t_lock.release()                    
                     self.flag[0] = True
 
-                    print("Connected to", ip)
+                    print("Connected to", ".".join(map(str, ip)))
 
             # close the socket in preparation for a new request
             #sock.close()
@@ -301,7 +302,6 @@ class MultiStream:
         # setup the bno055
         sensor = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
         sensor.set_mode(8) # 8- IMU mode, 12 - NDOF mode
-        #sensor.begin()
         print("BNO055 successfully registered")
 
         # setup shared memory
