@@ -371,7 +371,7 @@ class MultiStream:
         t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)  
         ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
-        flag = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
+        flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
         locks[0].acquire()
         t0_ = t0[0]
