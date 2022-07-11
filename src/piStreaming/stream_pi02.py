@@ -301,7 +301,7 @@ class MultiStream:
         # setup the bno055
         sensor = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
         sensor.set_mode(8) # 8- IMU mode, 12 - NDOF mode
-        sensor.begin()
+        #sensor.begin()
         print("BNO055 successfully registered")
 
         # setup shared memory
