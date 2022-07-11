@@ -114,7 +114,7 @@ class _Rcv:
         # tell the pi to stop
         msg = "SLEEP000000"
         data = struct.pack("<11s", msg.encode('UTF-8'))
-
+        print(len(data))
         connected, tries = False, 0
         while not connected and tries < num_tries:
             print("Trying to connect 2")
@@ -129,6 +129,7 @@ class _Rcv:
             con.write(data)
             con.flush()
             con.close()
+            print("Wrote!")
 
         else: 
             print("Connection to ", self.cfg['pi_ip'], " failed! Skipping shutdown request...")
