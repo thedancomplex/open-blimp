@@ -77,7 +77,7 @@ class MultiStream:
         # setup the socket for listening
         sock = socket.socket()
         sock.bind(('0.0.0.0', 8485))
-        sock.settimeout(2)
+        sock.settimeout(0.5)
         sock.listen(0)
 
         # start the processes
@@ -88,12 +88,17 @@ class MultiStream:
         while self.running:
             # wait for a request
             connected = False
+            tries = 0
             while not connected and self.running:
                 try: 
                     con = sock.accept()[0].makefile('rb')
                     connected = True
 
-                except: print("Listening for connections...")
+                except: 
+                    tries += 1
+                    if tries == 8:
+                        tries = 0
+                        print("Listening for connections...")
             
             data = []
             if connected:
