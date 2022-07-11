@@ -215,7 +215,7 @@ class MultiStream:
                 locks[2].acquire()
                 port_ = port[:]
                 locks[2].release()                
-                print(ip_, port_)
+                print("Cam:", ip_, port_)
 
                 try:
                     sock.connect((ip_, port_))
@@ -334,7 +334,7 @@ class MultiStream:
             locks[2].acquire()
             port_ = port[:]
             locks[2].release()                
-            print(ip_, port_)
+            print("BNO:", ip_, port_)
 
             # active flag
             while flag[0]:
@@ -404,7 +404,7 @@ class MultiStream:
             locks[2].acquire()
             port_ = port[:]
             locks[2].release()                
-            print(ip_, port_)
+            print("VL53", ip_, port_)
 
             # active flag
             while flag[0]:
