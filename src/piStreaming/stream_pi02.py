@@ -222,10 +222,11 @@ class MultiStream:
                     sock.connect((ip_, port_[0]))
                     connected = True
 
-                except: print("Running...")
+                except: pass
 
             # return prematurely if stopped early
             if not connected: 
+                print("Running...")
                 time.sleep(1)
                 continue
 
