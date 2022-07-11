@@ -5,7 +5,7 @@ import signal
 import socket
 import struct
 import time
-
+import traceback
 from multiprocessing import shared_memory as sm
 
 
@@ -278,7 +278,8 @@ class MultiStream:
                     buf.truncate()
 
                 except:
-                    cam.close() 
+                    traceback.print_exc()
+                    #cam.close() 
                     break
 
             # prep for next call
