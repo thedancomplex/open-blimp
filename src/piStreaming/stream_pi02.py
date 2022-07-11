@@ -285,7 +285,6 @@ class MultiStream:
             # prep for next call
             print("Closing camera")
             cam.close()
-            cam_connection.close()
             sock.close()
             sock = socket.socket()
             sock.settimeout(1)
