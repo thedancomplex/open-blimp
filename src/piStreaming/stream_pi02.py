@@ -5,7 +5,7 @@ import signal
 import socket
 import struct
 import time
-import traceback
+
 from multiprocessing import shared_memory as sm
 
 
@@ -18,14 +18,14 @@ class MultiStream:
 
         # setup shared memory
         self.sh_t0 = sm.SharedMemory(create=True, size=8)
-        self.sh_ip = sm.SharedMemory(create=True, size=4)        
+        self.sh_ip = sm.SharedMemory(create=True, size=4)
         self.sh_c_port = sm.SharedMemory(create=True, size=2)
         self.sh_b_port = sm.SharedMemory(create=True, size=2)
         self.sh_d_port = sm.SharedMemory(create=True, size=2)
         self.sh_params = sm.SharedMemory(create=True, size=8)
 
-        self.t0 = np.ndarray(1, dtype=np.float32, buffer=self.sh_t0.buf)        
-        self.ip = np.ndarray(4, dtype=np.uint8, buffer=self.sh_ip.buf)        
+        self.t0 = np.ndarray(1, dtype=np.float32, buffer=self.sh_t0.buf)
+        self.ip = np.ndarray(4, dtype=np.uint8, buffer=self.sh_ip.buf)
         self.c_port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_c_port.buf)
         self.b_port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_b_port.buf)
         self.d_port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_d_port.buf)
@@ -35,14 +35,14 @@ class MultiStream:
         self.ip_lock = mp.Lock()
         self.c_lock = mp.Lock()
         self.b_lock = mp.Lock()
-        self.d_lock = mp.Lock()        
+        self.d_lock = mp.Lock()
         self.p_lock = mp.Lock()
 
         # setup the sleep/running flag
         self.sh_flag = sm.SharedMemory(create=True, size=2)
         self.flag = np.ndarray(2, dtype=np.bool_, buffer=self.sh_flag.buf)
         self.flag[:] = [False, True]  # active, running
-                
+
         # running flag (to be stopped in ctrl-c event)
         self.running = True
 
@@ -89,12 +89,12 @@ class MultiStream:
             # wait for a request
             connected = False
             while not connected and self.running:
-                try: 
+                try:
                     con = sock.accept()[0].makefile('rb')
                     connected = True
 
                 except: pass
-            
+
             data = []
             if connected:
                 try: data = con.read(11)
@@ -106,12 +106,12 @@ class MultiStream:
                 msg = "".join(map(chr, data))
 
                 # check if correct message
-                if msg == 'SLEEP000000': 
+                if msg == 'SLEEP000000':
                     self.flag[0] = False
                     print("Sleeping!")
 
-                else:                    
-                    # - 1 byte id_num, 4 bytes IP, 4 bytes img size, 1 byte fps, 1 byte quality 
+                else:
+                    # - 1 byte id_num, 4 bytes IP, 4 bytes img size, 1 byte fps, 1 byte quality
 
                     # protected writes
                     ip = struct.unpack("<4B", data[1:5])
@@ -120,26 +120,26 @@ class MultiStream:
                     self.ip_lock.release()
 
                     id_num = data[0]
-                    self.c_lock.acquire()                    
+                    self.c_lock.acquire()
                     self.c_port[:] = 1024 + 3*(id_num-1)
-                    self.c_lock.release()                    
-                    self.b_lock.acquire()                    
+                    self.c_lock.release()
+                    self.b_lock.acquire()
                     self.b_port[:] = 1025 + 3*(id_num-1)
-                    self.b_lock.release()                    
-                    self.d_lock.acquire()                    
+                    self.b_lock.release()
+                    self.d_lock.acquire()
                     self.d_port[:] = 1026 + 3*(id_num-1)
-                    self.d_lock.release()                    
-                    
+                    self.d_lock.release()
+
                     self.p_lock.acquire()
                     self.params[:2] = struct.unpack("<2H", data[5:9])
                     self.params[2] = data[9]
                     self.params[3] = data[10]
                     self.p_lock.release()
-                    
+
                     # start streams
                     self.t_lock.acquire()
                     self.t0[0] = time.time()
-                    self.t_lock.release()                    
+                    self.t_lock.release()
                     self.flag[0] = True
 
                     print("Connected to", ".".join(map(str, ip)))
@@ -150,7 +150,7 @@ class MultiStream:
         self.flag[:] = False
         if self.pcam is not None:
             self.pcam.join()
-            
+
         if self.pbno is not None:
             self.pbno.join()
 
@@ -180,9 +180,9 @@ class MultiStream:
             from io import BytesIO
 
         except:
-            print("Camera library import failed! Ignoring camera stream") 
+            print("Camera library import failed! Ignoring camera stream")
             return
-        
+
         # setup shared memory
         sh_t0 = sm.SharedMemory(names[0])
         sh_ip = sm.SharedMemory(names[1])
@@ -190,8 +190,8 @@ class MultiStream:
         sh_params = sm.SharedMemory(names[3])
         sh_flag = sm.SharedMemory(names[4])
 
-        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)  
-        ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
+        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)
+        ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         params = np.ndarray(4, dtype=np.uint16, buffer=sh_params.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
@@ -203,12 +203,12 @@ class MultiStream:
         while flag[1]:
             locks[1].acquire()
             ip_ = ip[:]
-            locks[1].release()                
+            locks[1].release()
             ip_ = ".".join(map(str, ip_))
 
             locks[2].acquire()
             port_ = port[:]
-            locks[2].release()                
+            locks[2].release()
 
             # connect to the server
             connected = False
@@ -220,22 +220,22 @@ class MultiStream:
                 except: pass
 
             # return prematurely if stopped early
-            if not connected: 
+            if not connected:
                 time.sleep(1)
                 continue
 
             # setup the camera
             locks[3].acquire()
-            params_ = params[:]        
+            params_ = params[:]
             locks[3].release()
-            
+
             res, fps, q = params_[:2], params_[2], params_[3]
 
             cam = PiCamera()
             cam.resolution = res
             cam.framerate = fps
             cam.exposure_mode = "sports"
-                   
+
             print("Camera successfully registered")
             cam_connection = sock.makefile('wb')
 
@@ -248,7 +248,7 @@ class MultiStream:
                 # break if run flag is off
                 if not flag[0]: break
 
-                # get the current time                
+                # get the current time
                 tframe = time.time() - t0_
 
                 try:
@@ -266,7 +266,7 @@ class MultiStream:
                     tbuf = struct.pack('<d', tframe)
                     cam_connection.write(tbuf)
                     cam_connection.flush()
-                    
+
                     # delete buffer
                     buf.seek(0)
                     buf.truncate()
@@ -286,8 +286,8 @@ class MultiStream:
         sh_ip.close()
         sh_port.close()
         sh_params.close()
-        sh_flag.close()        
-        
+        sh_flag.close()
+
     def handle_bno(self, names, locks):
         # see if BNO055 libs are installed
         try:
@@ -307,8 +307,8 @@ class MultiStream:
         sh_port = sm.SharedMemory(names[2])
         sh_flag = sm.SharedMemory(names[3])
 
-        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)  
-        ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
+        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)
+        ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
@@ -324,12 +324,12 @@ class MultiStream:
 
             locks[1].acquire()
             ip_ = ip[:]
-            locks[1].release()                
+            locks[1].release()
             ip_ = ".".join(map(str, ip_))
 
             locks[2].acquire()
             port_ = port[:]
-            locks[2].release()                
+            locks[2].release()
 
             # active flag
             while flag[0]:
@@ -342,7 +342,7 @@ class MultiStream:
                 tframe = time.time() - t0_
 
                 bno_packet = quat + gyro + acc + (tframe,)
-                
+
                 bno_bytes = struct.pack("<11d", *bno_packet)
                 sock.sendto(bno_bytes, (ip_, port_[0]))
 
@@ -366,7 +366,7 @@ class MultiStream:
             import adafruit_vl53l1x
 
         except:
-            print("VL53L1x library import failed! Ignoring distance stream") 
+            print("VL53L1x library import failed! Ignoring distance stream")
             return
 
         # setup shared memory
@@ -375,8 +375,8 @@ class MultiStream:
         sh_port = sm.SharedMemory(names[2])
         sh_flag = sm.SharedMemory(names[3])
 
-        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)  
-        ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
+        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)
+        ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
@@ -398,16 +398,16 @@ class MultiStream:
 
             locks[1].acquire()
             ip_ = ip[:]
-            locks[1].release()                
+            locks[1].release()
             ip_ = ".".join(map(str, ip_))
 
             locks[2].acquire()
             port_ = port[:]
-            locks[2].release()                
+            locks[2].release()
 
             # active flag
             while flag[0]:
-                if last_flag != flag[0]: 
+                if last_flag != flag[0]:
                     vl53.start_ranging()
                     print("VL53L1X successfully registered")
 
@@ -415,7 +415,7 @@ class MultiStream:
                     distance = vl53.distance
                     vl53.clear_interrupt()
 
-                    if distance is not None:          
+                    if distance is not None:
                         tframe = time.time() - t0_
                         dist_packet = (distance, tframe)
                         dist_bytes = struct.pack("<2d", *dist_packet)
@@ -426,7 +426,7 @@ class MultiStream:
 
             # low-power mode
             if last_flag != flag[0]: vl53.stop_ranging()
-            last_flag = flag[0]            
+            last_flag = flag[0]
             time.sleep(1)
 
         # cleanup
