@@ -201,6 +201,7 @@ class MultiStream:
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
         sock = socket.socket()
+        sock.settimeout(1)
 
         # shutdown flag
         while flag[1]:
