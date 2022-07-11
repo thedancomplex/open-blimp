@@ -286,6 +286,7 @@ class MultiStream:
             cam.close()
 
         # cleanup
+        print("CLEANUP")
         sock.close()
         sh_t0.close()
         sh_ip.close()
