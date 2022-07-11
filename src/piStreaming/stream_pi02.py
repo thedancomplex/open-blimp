@@ -88,13 +88,12 @@ class MultiStream:
         while self.running:
             # wait for a request
             connected = False
-            print("Waiting for connection...")
             while not connected and self.running:
                 try: 
                     con = sock.accept()[0].makefile('rb')
                     connected = True
 
-                except: pass
+                except: print("Waiting for connection...")
             
             data = []
             if connected:
@@ -147,7 +146,7 @@ class MultiStream:
                     print("Connected to", ".".join(map(str, ip)))
 
             # close the socket in preparation for a new request
-            #sock.close()
+            sock.close()
 
         # shutdown operations
         print("Shutting down!")
