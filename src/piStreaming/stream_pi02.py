@@ -225,7 +225,9 @@ class MultiStream:
                 except: pass
 
             # return prematurely if stopped early
-            if not connected: continue
+            if not connected: 
+                time.sleep(1)
+                continue
 
             # setup the camera
             locks[3].acquire()
