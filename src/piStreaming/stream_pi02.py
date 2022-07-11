@@ -104,8 +104,8 @@ class MultiStream:
             # if stop signal is read, go to sleep
             if len(data) == 11:
                 # parse data
-                msg = str(data)[2:][:-1]
-                print(str(data))
+                msg = data.decode('utf-8')
+                print(msg)
                 # check if correct message
                 if msg == 'SLEEP000000': 
                     self.flag[0] = False
