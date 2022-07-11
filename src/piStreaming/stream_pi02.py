@@ -341,6 +341,8 @@ class MultiStream:
                 tframe = time.time() - t0_
 
                 bno_packet = quat + gyro + acc + (tframe,)
+                print(bno_bytes); print(ip_, port_)
+                
                 bno_bytes = struct.pack("<11d", *bno_packet)
                 sock.sendto(bno_bytes, (ip_, port_))
 
