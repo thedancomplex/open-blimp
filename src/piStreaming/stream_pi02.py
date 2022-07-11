@@ -48,24 +48,37 @@ class MultiStream:
 
         signal.signal(signal.SIGINT, self.handler)
 
-        # setup the processes
-        fname = self.sh_flag.name
-        c_args = (ip, c_port, res, fps, qual, fname)
-        b_args = ()
-        d_args = ()
-        self.pcam = mp.Process(target=self.handle_cam, args=c_args)
-        self.pbno = mp.Process(target=self.handle_bno, args=b_args)
-        self.pdis = mp.Process(target=self.handle_dis, args=d_args)
+        # get SM names
+        t0_name = self.sh_t0.name
+        ip_name = self.sh_ip.name
+        cp_name = self.sh_c_port.name
+        bp_name = self.sh_b_port.name
+        dp_name = self.sh_d_port.name
+        pa_name = self.sh_params.name
+        fl_name = self.sh_flag.name
 
-        # start the processes
-        self.pcam.start()
-        self.pbno.start()
-        self.pdis.start()
+        # setup the processes
+        c_names = (t0_name, ip_name, cp_name, pa_name, fl_name)
+        c_locks = (self.t_lock, self.ip_lock, self.c_lock, self.p_lock)
+        self.pcam = mp.Process(target=self.handle_cam, args=c_args)
+
+        b_names = (t0_name, ip_name, bp_name, fl_name)
+        b_locks = (self.t_lock, self.ip_lock, self.c_lock)
+        self.pbno = mp.Process(target=self.handle_bno, args=(b_names, b_locks))
+
+        d_names = (t0_name, ip_name, dp_name, fl_name)
+        d_locks = (self.t_lock, self.ip_lock, self.c_lock)
+        self.pdis = mp.Process(target=self.handle_dis, args=(d_names, d_locks))
 
     def handler(self, signum, frame):
         self.running = False
 
     def run(self):
+        # start the processes
+        self.pcam.start()
+        self.pbno.start()
+        self.pdis.start()
+
         # setup the socket for listening
         sock = socket.socket()
         sock.bind(('0.0.0.0', 8485))
@@ -339,7 +352,7 @@ class MultiStream:
         sh_flag.close()
 
 
-    def handle_dis(self, ip_name, port_name, lock, fname):
+    def handle_dis(self, names, locks):
         # see if VL53L1X libs are installed
         try:
             import board
@@ -350,9 +363,10 @@ class MultiStream:
             return
 
         # setup shared memory
-        sh_ip = sm.SharedMemory(ip_name)
-        sh_port = sm.SharedMemory(port_name)
-        sh_flag = sm.SharedMemory(fname)
+        sh_t0 = sm.SharedMemory(names[0])
+        sh_ip = sm.SharedMemory(names[1])
+        sh_port = sm.SharedMemory(names[2])
+        sh_flag = sm.SharedMemory(names[3])
 
         ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
         port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_port.buf)
