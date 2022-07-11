@@ -278,6 +278,7 @@ class MultiStream:
                     buf.truncate()
 
                 except:
+                    print("Error!")
                     traceback.print_exc() 
                     break
 
