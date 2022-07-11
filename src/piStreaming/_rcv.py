@@ -145,7 +145,7 @@ class _Rcv:
 
         # setup socket
         sock = socket.socket()
-        sock.settimeout(0.5)
+        sock.settimeout(1.0)
         sock.bind(('0.0.0.0', 1024+3*(self.cfg['id_num']-1)))
         sock.listen(0)
         
@@ -172,16 +172,15 @@ class _Rcv:
                 image_stream = io.BytesIO()
                 try: img_data = img_connection.read(image_len)
                 except: continue
-                
+
                 # ignore if wrong size
                 if len(img_data) != image_len: continue
-                
                 image_stream.write(img_data)
                 image_stream.seek(0)
 
                 # parse image
                 nparr = np.frombuffer(image_stream.read(), np.uint8)
-                imgBGR = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                imgBGR = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED); print(imgBGR)
                 img = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
 
                 # read current time

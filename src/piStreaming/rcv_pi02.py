@@ -90,7 +90,7 @@ class MultiRcv:
         self.lock_img.acquire()
         stamp, img = self.img_stamp, self.img
         self.lock_img.release()
-        
+        #print(img)
         return stamp, img
         
     def get_bno(self):

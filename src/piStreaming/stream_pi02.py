@@ -5,7 +5,7 @@ import signal
 import socket
 import struct
 import time
-
+import traceback
 from multiprocessing import shared_memory as sm
 
 
@@ -273,7 +273,7 @@ class MultiStream:
                     cam_connection.write(tbuf)
                     cam_connection.flush()
 
-                except: break
+                except: traceback.print_exc(); break
                     
                 # delete buffer
                 buf.seek(0)

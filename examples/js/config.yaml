@@ -9,4 +9,4 @@ id_num: 1
 im_rows: 640 #240
 im_cols: 720 #360
 fps: 20
-qual: 20
+qual: 10
