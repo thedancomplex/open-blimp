@@ -248,7 +248,6 @@ class MultiStream:
             locks[0].acquire()
             t0_ = t0[0]
             locks[0].release()
-            time.sleep(0.5)
             buf = BytesIO()
             for _ in cam.capture_continuous(buf, format="jpeg", quality=q, use_video_port=True):
                 # break if run flag is off
@@ -279,10 +278,11 @@ class MultiStream:
 
                 except:
                     traceback.print_exc()
-                    #cam.close() 
+                    cam.close() 
                     break
 
             # prep for next call
+            print("Closing camera")
             cam.close()
 
         # cleanup
