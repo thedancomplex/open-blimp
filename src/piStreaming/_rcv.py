@@ -82,7 +82,6 @@ class _Rcv:
         connected, tries = False, 0
 
         while not connected and tries < num_tries:
-            print(self.cfg['pi_ip'])
             try:
                 sock.connect((self.cfg['pi_ip'], 8485))
                 connected = True
@@ -94,7 +93,6 @@ class _Rcv:
             con.write(data)
             con.flush()
             sock.close()
-            print("Pi stream started!")
 
         else: 
             print("Couldn't connect to ", self.cfg['pi_ip'])

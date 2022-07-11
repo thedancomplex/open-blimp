@@ -300,6 +300,12 @@ class MultiStream:
         # setup the bno055
         sensor = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
         sensor.set_mode(8) # 8- IMU mode, 12 - NDOF mode
+        sensor.set_axis_remap(x=BNO055.AXIS_REMAP_X,
+                              y=BNO055.AXIS_REMAP_Y,
+                              z=BNO055.AXIS_REMAP_Z,
+                              x_sign=BNO055.AXIS_REMAP_NEGATIVE,
+                              y_sign=BNO055.AXIS_REMAP_NEGATIVE,
+                              z_sign=BNO055.AXIS_REMAP_POSITIVE)       
 
         # setup shared memory
         sh_t0 = sm.SharedMemory(names[0])

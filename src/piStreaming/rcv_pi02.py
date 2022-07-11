@@ -90,7 +90,6 @@ class MultiRcv:
         self.lock_img.acquire()
         stamp, img = self.img_stamp, self.img
         self.lock_img.release()
-        #print(img)
         return stamp, img
         
     def get_bno(self):
@@ -103,7 +102,6 @@ class MultiRcv:
         a = self.bno[7:]
         stamp = self.bno_stamp
         self.lock_bno.release()
-        
         return stamp, (q, g, a)
 
     def get_dis(self):
@@ -112,8 +110,7 @@ class MultiRcv:
         # protected read
         self.lock_dis.acquire()
         stamp, dis = self.dis_stamp, self.dis[0]/100.
-        self.lock_dis.release()
-        
+        self.lock_dis.release()        
         return stamp, dis
 
     

@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import signal
 import time
-import traceback
 
 from pyBlimp.blimp import Blimp
 from pyBlimp.utils import *
