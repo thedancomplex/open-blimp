@@ -16,29 +16,63 @@ class MultiStream:
         self.pbno = None
         self.pdis = None
 
-        # setup the running flag
-        self.sh_flag = sm.SharedMemory(create=True, size=1)
-        self.flag = np.ndarray(1, dtype=np.bool_, buffer=self.sh_flag.buf)
-        self.flag[0] = False
+        # setup shared memory
+        self.sh_t0 = sm.SharedMemory(create=True, size=8)
+        self.sh_ip = sm.SharedMemory(create=True, size=4)        
+        self.sh_c_port = sm.SharedMemory(create=True, size=2)
+        self.sh_b_port = sm.SharedMemory(create=True, size=2)
+        self.sh_d_port = sm.SharedMemory(create=True, size=2)
+        self.sh_params = sm.SharedMemory(create=True, size=8)
+
+        self.t0 = np.ndarray(1, dtype=np.float32, buffer=self.sh_t0.buf)        
+        self.ip = np.ndarray(4, dtype=np.uint8, buffer=self.sh_ip.buf)        
+        self.c_port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_c_port.buf)
+        self.b_port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_b_port.buf)
+        self.d_port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_d_port.buf)
+        self.params = np.ndarray(4, dtype=np.uint16, buffer=self.sh_params.buf)
+
+        self.t_lock = mp.Lock()
+        self.ip_lock = mp.Lock()
+        self.c_lock = mp.Lock()
+        self.b_lock = mp.Lock()
+        self.d_lock = mp.Lock()        
+        self.p_lock = mp.Lock()
+
+        # setup the sleep/running flag
+        self.sh_flag = sm.SharedMemory(create=True, size=2)
+        self.flag = np.ndarray(2, dtype=np.bool_, buffer=self.sh_flag.buf)
+        self.flag[:] = [False, True]  # active, running
                 
-        # setup the running flag (to be stopped in ctrl-c event)
+        # running flag (to be stopped in ctrl-c event)
         self.running = True
 
         signal.signal(signal.SIGINT, self.handler)
+
+        # setup the processes
+        fname = self.sh_flag.name
+        c_args = (ip, c_port, res, fps, qual, fname)
+        b_args = ()
+        d_args = ()
+        self.pcam = mp.Process(target=self.handle_cam, args=c_args)
+        self.pbno = mp.Process(target=self.handle_bno, args=b_args)
+        self.pdis = mp.Process(target=self.handle_dis, args=d_args)
+
+        # start the processes
+        self.pcam.start()
+        self.pbno.start()
+        self.pdis.start()
 
     def handler(self, signum, frame):
         self.running = False
 
     def run(self):
+        # setup the socket for listening
         sock = socket.socket()
         sock.bind(('0.0.0.0', 8485))
         sock.listen(0)
         sock.settimeout(0.5)
 
-        # wait for a start signal
         while self.running:
-            # setup the socket for listening
-
             # wait for a request
             connected = False
             print("Waiting for connection...")
@@ -49,65 +83,60 @@ class MultiStream:
 
                 except: pass
             
-            print("Connected!")
-            # read in the parameters to start
             data = []
             if connected:
                 try: data = con.read(11)
                 except: pass
 
-            # if stop signal is read, set flag and stop
+            # if stop signal is read, go to sleep
             if len(data) == 11:
                 # parse data
                 msg = str(data)[2:][:-1]
             
                 # check if correct message
-                if msg == 'STOP0000000': 
+                if msg == 'SLEEP000000': 
                     self.flag[0] = False
-                    print("Stop heard! Ending streams")
+                    print("Going to sleep!")
 
-                    # wait for processes to finish before resetting
-                    if self.pcam is not None: self.pcam.join()
-                    if self.pbno is not None: self.pbno.join()
-                    if self.pdis is not None: self.pdis.join()
+                else:                    
+                    # - 1 byte id_num, 4 bytes IP, 4 bytes img size, 1 byte fps, 1 byte quality 
 
+                    # protected writes
+                    self.ip_lock.acquire()
+                    self.ip[:] = struct.unpack("<4B", data[1:5])
+                    self.ip_lock.release()
 
-                # - 1 byte id_num, 4 bytes IP, 4 bytes img size, 1 byte fps, 1 byte quality 
-                id_num = data[0]
-                ip = struct.unpack("<4B", data[1:5])
-                ip = ".".join(map(str, ip))
-                res = struct.unpack("<2H", data[5:9])
-                fps = data[9]
-                qual = data[10]
+                    id_num = data[0]
+                    self.c_lock.acquire()                    
+                    self.c_port[:] = 1024 + 3*(id_num-1)
+                    self.c_lock.release()                    
+                    self.b_lock.acquire()                    
+                    self.b_port[:] = 1025 + 3*(id_num-1)
+                    self.b_lock.release()                    
+                    self.d_lock.acquire()                    
+                    self.d_port[:] = 1026 + 3*(id_num-1)
+                    self.d_lock.release()                    
+                    
+                    self.p_lock.acquire()
+                    self.params[:2] = struct.unpack("<2H", data[5:9])
+                    self.params[2] = data[9]
+                    self.params[3] = data[10]
+                    self.p_lock.release()
+                    
+                    # start streams
+                    self.t0_lock.acquire()
+                    self.t0[0] = time.time()
+                    self.t0_lock.release()                    
+                    self.flag[0] = True
 
-                # start streams
-                self.flag[0] = True
-
-                # define ports based on id_num
-                c_port = 1024 + 3*(id_num-1)
-                b_port = 1025 + 3*(id_num-1)
-                d_port = 1026 + 3*(id_num-1)
-
-                # setup the processes
-                fname = self.sh_flag.name
-                args = (ip, c_port, res, fps, qual, fname)
-                self.pcam = mp.Process(target=self.handle_cam, args=args)
-                self.pbno = mp.Process(target=self.handle_bno, args=(ip, b_port, fname))
-                self.pdis = mp.Process(target=self.handle_dis, args=(ip, d_port, fname))
-
-                # start the processes
-                self.t0 = time.time()
-                self.pcam.start()
-                self.pbno.start()
-                self.pdis.start()
-                print("Connected to", ip)
+                    print("Connected to", ip)
 
             # close the socket in preparation for a new request
-            #sock.shutdown()
             #sock.close()
 
         # shutdown operations
-        self.flag[0] = False
+        sock.close()
+        self.flag[1] = False
         if self.pcam is not None:
             self.pcam.join()
             
@@ -117,10 +146,23 @@ class MultiStream:
         if self.pdis is not None:
             self.pdis.join()
 
+        self.sh_t0.close()
+        self.sh_ip.close()
+        self.sh_params.close()
+        self.sh_c_port.close()
+        self.sh_b_port.close()
+        self.sh_d_port.close()
         self.sh_flag.close()
+
+        self.sh_t0.unlink()
+        self.sh_ip.unlink()
+        self.sh_params.unlink()
+        self.sh_c_port.unlink()
+        self.sh_b_port.unlink()
+        self.sh_d_port.unlink()
         self.sh_flag.unlink()
 
-    def handle_cam(self, ip, port, res, fps, q, fname):
+    def handle_cam(self, names, locks):
         # see if camera libs are installed
         try:
             from picamera import PiCamera
@@ -130,80 +172,111 @@ class MultiStream:
             print("Camera library import failed! Ignoring camera stream") 
             return
         
-        # setup shared memory flag
-        sh_flag = sm.SharedMemory(fname)
-        flag = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
+        # setup shared memory
+        sh_t0 = sm.SharedMemory(names[0])
+        sh_ip = sm.SharedMemory(names[1])
+        sh_port = sm.SharedMemory(names[2])
+        sh_params = sm.SharedMemory(names[3])
+        sh_flag = sm.SharedMemory(names[4])
 
-        # setup the camera
-        cam = PiCamera()
-        cam.resolution = res
-        cam.framerate = fps
-        cam.exposure_mode = "sports"
+        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)  
+        ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
+        port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_port.buf)
+        params = np.ndarray(8, dtype=np.uint16, buffer=sh_params.buf)
+        flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
-        # connect to the server
         sock = socket.socket()
-        sock.settimeout(0.5)
-        connected = False
-        while not connected and flag[0]:
-            try:
-                sock.connect((ip, port))
-                connected = True
 
-            except: pass
-
-        # return prematurely if stopped early
-        if not connected: 
-            sh_flag.close()
-            cam.close()
-            return        
-               
-        print("Camera successfully registered")
-        cam_connection = sock.makefile('wb')
-
-        # start the camera stream
-        buf = BytesIO()
-        t0 = time.time()
-        for frame in cam.capture_continuous(buf, format="jpeg", quality=q, use_video_port=True):
-
-            # break if run flag is off
-            if not flag[0]: break
-
-            # get the current time
-            tframe = time.time() - self.t0
-
-            try:
-                # write the length of the capture
-                buf_len = struct.pack('<L', buf.tell())
-                cam_connection.write(buf_len)
-                cam_connection.flush()
-
-                # write the image data
-                buf.seek(0)
-                cam_connection.write(buf.read())
-                cam_connection.flush()
-
-                # write the current time
-                tbuf = struct.pack('<d', tframe)
-                cam_connection.write(tbuf)
-                cam_connection.flush()
-
-            except: 
-                # if the cam connection fails for some reason
-                print("Broken image pipe!")
-                sh_flag.close()
-                #cam.close()
-                return
+        # shutdown flag
+        while flag[1]:
+            # connect to the server
+            connected = False
+            while not connected and flag[0]:
+                lock[1].acquire()
+                ip_ = ip[:]
+                lock[1].release()                
+                ip_ = ".".join(map(str, ip_))
                 
-            # delete buffer
-            buf.seek(0)
-            buf.truncate()
+                lock[2].acquire()
+                port_ = port[:]
+                lock[2].release()                
+                
+                try:
+                    sock.connect((ip_, port_))
+                    connected = True
+
+                except: pass
+
+            # return prematurely if stopped early
+            if not connected: 
+                continue
+
+            # setup the camera
+            lock[3].acquire()
+            params_ = params[:]        
+            lock[3].release()
+            
+            res, fps, q = params_[:2], params_[2], params_[3]
+            
+            cam = PiCamera()
+            cam.resolution = res
+            cam.framerate = fps
+            cam.exposure_mode = "sports"
+                   
+            print("Camera successfully registered")
+            cam_connection = sock.makefile('wb')
+
+            # start the camera stream
+            lock[0].acquire()
+            t0_ = t0[0]
+            lock[0].release()
+
+            buf = BytesIO()
+            for _ in cam.capture_continuous(buf, format="jpeg", quality=q, use_video_port=True):
+                # break if run flag is off
+                if not flag[0]: break
+
+                # get the current time                
+                tframe = time.time() - t0_
+
+                try:
+                    # write the length of the capture
+                    buf_len = struct.pack('<L', buf.tell())
+                    cam_connection.write(buf_len)
+                    cam_connection.flush()
+
+                    # write the image data
+                    buf.seek(0)
+                    cam_connection.write(buf.read())
+                    cam_connection.flush()
+
+                    # write the current time
+                    tbuf = struct.pack('<d', tframe)
+                    cam_connection.write(tbuf)
+                    cam_connection.flush()
+
+                except: 
+                    # if the cam connection fails for some reason
+                    print("Broken image pipe!")
+                    cam.close()
+                    break
+                    
+                # delete buffer
+                buf.seek(0)
+                buf.truncate()
+
+            # prep for next call
+            cam.close()
 
         # cleanup
-        cam_connection.close()
-        sh_flag.close()
-        cam.close()
-
-    def handle_bno(self, ip, port, fname):
+        sock.close()
+        sh_t0.close()
+        sh_ip.close()
+        sh_port.close()
+        sh_params.close()
+        sh_flag.close()        
+        
+    def handle_bno(self, names, locks):
         # see if BNO055 libs are installed
         try:
             from Adafruit_BNO055 import BNO055
@@ -216,31 +289,57 @@ class MultiStream:
         sensor = BNO055.BNO055(serial_port='/dev/serial0', rst=18)
         sensor.set_mode(8) # 8- IMU mode, 12 - NDOF mode
         sensor.begin()
+        print("BNO055 successfully registered")
 
-        # setup shared memory flag
-        sh_flag = sm.SharedMemory(fname)
-        flag = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
+        # setup shared memory
+        sh_t0 = sm.SharedMemory(names[0])
+        sh_ip = sm.SharedMemory(names[1])
+        sh_port = sm.SharedMemory(names[2])
+        sh_flag = sm.SharedMemory(names[3])
+
+        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)  
+        ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
+        port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_port.buf)
+        flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
+
+        lock[0].acquire()
+        t0_ = t0[0]
+        lock[0].release()
+
+        lock[1].acquire()
+        ip_ = ip[:]
+        lock[1].release()                
+        ip_ = ".".join(map(str, ip_))
+        
+        lock[2].acquire()
+        port_ = port[:]
+        lock[2].release()                
 
         # setup the socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        # start the bno055 stream
-        while flag[0]:
-            quat = sensor.read_quaternion()
-            gyro = sensor.read_gyroscope()
-            acc  = sensor.read_linear_acceleration()
-            tframe = time.time() - self.t0
+        # shutdown flag
+        while flag[1]:
+            # active flag
+            if flag[0]:
+                quat = sensor.read_quaternion()
+                gyro = sensor.read_gyroscope()
+                acc  = sensor.read_linear_acceleration()
+                tframe = time.time() - t0_
 
-            bno_packet = quat + gyro + acc + (tframe,)
-            bno_bytes = struct.pack("<11d", *bno_packet)
-            sock.sendto(bno_bytes, (ip, port))
+                bno_packet = quat + gyro + acc + (tframe,)
+                bno_bytes = struct.pack("<11d", *bno_packet)
+                sock.sendto(bno_bytes, (ip_, port_))
 
         # cleanup
-        del sensor
-        sh_flag.close()
         sock.close()
+        sh_t0.close()
+        sh_ip.close()
+        sh_port.close()
+        sh_flag.close()
 
-    def handle_dis(self, ip, port, fname):
+
+    def handle_dis(self, ip_name, port_name, lock, fname):
         # see if VL53L1X libs are installed
         try:
             import board
@@ -250,9 +349,27 @@ class MultiStream:
             print("VL53L1x library import failed! Ignoring distance stream") 
             return
 
-        # setup shared memory flag
+        # setup shared memory
+        sh_ip = sm.SharedMemory(ip_name)
+        sh_port = sm.SharedMemory(port_name)
         sh_flag = sm.SharedMemory(fname)
+
+        ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
+        port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_port.buf)
         flag = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
+
+        lock[0].acquire()
+        t0_ = t0[0]
+        lock[0].release()
+
+        lock[1].acquire()
+        ip_ = ip[:]
+        lock[1].release()                
+        ip_ = ".".join(map(str, ip_))
+        
+        lock[2].acquire()
+        port_ = port[:]
+        lock[2].release()                
 
         # setup the socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -262,28 +379,41 @@ class MultiStream:
         vl53 = adafruit_vl53l1x.VL53L1X(i2c)
         vl53.distance_mode = 2
         vl53.timing_budget = 100
-        vl53.start_ranging()
         print("VL53L1X successfully registered")
 
-        # start VL53L1X stream
-        while flag[0]:
-            if vl53.data_ready:
-                distance = vl53.distance
-                vl53.clear_interrupt()
+        # shutdown flag
+        last_flag = not flag[0]
+        while flag[1]:
+            # active flag
+            if flag[0]:
+                if last_flag != flag[0]: vl53.start_ranging()
 
-                if distance is not None:
-                    tframe = time.time() - self.t0
-                    dist_packet = (distance, tframe)
-                    dist_bytes = struct.pack("<2d", *dist_packet)
-                    sock.sendto(dist_bytes, (ip, port))
+                if vl53.data_ready:
+                    distance = vl53.distance
+                    vl53.clear_interrupt()
 
-            time.sleep(0.02)
+                    if distance is not None:
+                        
+                    
+                        tframe = time.time() - self.t0
+                        dist_packet = (distance, tframe)
+                        dist_bytes = struct.pack("<2d", *dist_packet)
+                        sock.sendto(dist_bytes, (ip, port))
+
+                time.sleep(0.02)
+
+            # low-power mode
+            else:
+                if last_flag != flag: vl53.stop_ranging()
+
+            last_flag = flag[0]
 
         # cleanup
-        del vl53
-        del i2c
-        sh_flag.close()
         sock.close()
+        sh_t0.close()
+        sh_ip.close()
+        sh_port.close()
+        sh_flag.close()
 
 
 # setup streamer
