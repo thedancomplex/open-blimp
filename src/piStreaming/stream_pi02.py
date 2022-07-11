@@ -194,7 +194,7 @@ class MultiStream:
 
         t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)  
         ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
-        port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_port.buf)
+        port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         params = np.ndarray(8, dtype=np.uint16, buffer=sh_params.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
@@ -312,7 +312,7 @@ class MultiStream:
 
         t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)  
         ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
-        port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_port.buf)
+        port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
 
         lock[0].acquire()
@@ -369,7 +369,7 @@ class MultiStream:
         sh_flag = sm.SharedMemory(names[3])
 
         ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)        
-        port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_port.buf)
+        port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(1, dtype=np.bool_, buffer=sh_flag.buf)
 
         lock[0].acquire()
