@@ -94,23 +94,22 @@ class MultiStream:
                     con = sock.accept()[0].makefile('rb')
                     connected = True
 
-                except: print("Waiting for connection...")
+                except: pass
             
             data = []
             if connected:
                 try: data = con.read(11)
                 except: pass
 
-            print(len(data))
             # if stop signal is read, go to sleep
             if len(data) == 11:
                 # parse data
                 msg = "".join(map(chr, data))
-                print(msg)
+
                 # check if correct message
                 if msg == 'SLEEP000000': 
                     self.flag[0] = False
-                    print("Going to sleep!")
+                    print("Sleeping!")
 
                 else:                    
                     # - 1 byte id_num, 4 bytes IP, 4 bytes img size, 1 byte fps, 1 byte quality 
@@ -121,7 +120,7 @@ class MultiStream:
                     self.ip[:] = ip
                     self.ip_lock.release()
 
-                    id_num = data[0]
+                    id_num = data[0]; print(id_num)
                     self.c_lock.acquire()                    
                     self.c_port[:] = 1024 + 3*(id_num-1)
                     self.c_lock.release()                    
@@ -145,10 +144,6 @@ class MultiStream:
                     self.flag[0] = True
 
                     print("Connected to", ".".join(map(str, ip)))
-
-            # close the socket in preparation for a new request
-            #print("Closed socket!")
-            #con.close()
 
         # shutdown operations
         print("Shutting down!")

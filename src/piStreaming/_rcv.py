@@ -131,7 +131,6 @@ class _Rcv:
             con.write(data)
             con.flush()
             con.close()
-            print("Wrote!")
 
         else: 
             print("Connection to ", self.cfg['pi_ip'], " failed! Skipping shutdown request...")
@@ -198,7 +197,6 @@ class _Rcv:
 
         self.sh_img.close()
         self.sh_img_stamp.close()
-        print("EXIT C")
         
     def handle_bno_read(self):
         # - parses all bno data coming from the pi and stores it
@@ -234,7 +232,6 @@ class _Rcv:
                 
         self.sh_bno.close()
         self.sh_bno_stamp.close()
-        print("EXIT B")
         
     def handle_dis_read(self):
         # - parses all distance data coming from the pi and stores it
@@ -267,5 +264,4 @@ class _Rcv:
 
         self.sh_dis.close()
         self.sh_dis_stamp.close()
-        print("EXIT D")
 
