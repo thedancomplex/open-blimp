@@ -236,7 +236,7 @@ class MultiStream:
             locks[3].release()
             
             res, fps, q = params_[:2], params_[2], params_[3]
-
+            print("Connecting camera")
             cam = PiCamera()
             cam.resolution = res
             cam.framerate = fps
