@@ -277,8 +277,7 @@ class MultiStream:
                     buf.truncate()
 
                 except:
-                    traceback.print_exc()
-                    cam.close() 
+                    traceback.print_exc() 
                     break
 
             # prep for next call
@@ -286,7 +285,6 @@ class MultiStream:
             cam.close()
 
         # cleanup
-        print("CLEANUP")
         sock.close()
         sh_t0.close()
         sh_ip.close()
