@@ -94,7 +94,7 @@ class _Rcv:
             con = sock.makefile('wb')
             con.write(data)
             con.flush()
-            con.close()
+            sock.close()
             print("Pi stream started!")
 
         else: 
@@ -114,7 +114,9 @@ class _Rcv:
         # tell the pi to stop
         msg = "SLEEP000000"
         data = struct.pack("<11s", msg.encode('UTF-8'))
-        print(len(data))
+
+        sock = socket.socket()
+        sock.settimeout(0.5)
         connected, tries = False, 0
         while not connected and tries < num_tries:
             print("Trying to connect 2")
