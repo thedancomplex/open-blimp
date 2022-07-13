@@ -63,7 +63,7 @@ class _Rcv:
 
     def run(self):
         # number of times to attempt connection
-        num_tries = 3
+        num_tries = 10
 
         # prep the start signal
         my_ip = self.cfg['my_ip'].split('.')
@@ -93,6 +93,7 @@ class _Rcv:
             con.write(data)
             con.flush()
             sock.close()
+            print("Connected to", self.cfg['pi_ip'])
 
         else: 
             print("Couldn't connect to", self.cfg['pi_ip'])
@@ -142,6 +143,7 @@ class _Rcv:
 
         # setup socket
         sock = socket.socket()
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  
         sock.settimeout(1.0)
         sock.bind(('0.0.0.0', 1024+3*(self.cfg['id_num']-1)))
         sock.listen(0)

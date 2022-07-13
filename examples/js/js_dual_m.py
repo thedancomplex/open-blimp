@@ -26,35 +26,26 @@ b = BlimpManager(cfg, "/dev/ttyUSB0")
 js = JoyStick_helper()
 
 # show the FPV
-#fig, axes = plt.subplots(1,2,figsize=(11,5))
-
-# desired states to track
-des1 = np.zeros(4)
-des2 = np.zeros(4)
+fig, axes = plt.subplots(1,2,figsize=(11,5))
 
 while running:
     # handle the joystick
     ax, on1, on2 = js.get_state()
 
     # decide inputs    
-    if on1:
-        des1[0] = -0.05*ax[0]
-        des1[1] =  0.05*ax[1]
-        des1[2] = wrap(des1[2]+0.05*ax[2])
-        des1[3] = np.clip(des1[3]-0.05*ax[3], 0.0, 2.5)
-        b.set_des(des1, 0)
+    cmd = np.zeros(4)
+    cmd[0] = -0.05*ax[1]
+    cmd[1] = -0.05*ax[0]
+    cmd[2] =  0.05*ax[3]
+    cmd[3] =  0.05*ax[2]
 
-    elif on2:
-        des2[0] = -0.05*ax[0]
-        des2[1] =  0.05*ax[1]
-        des2[2] = wrap(des2[2]+0.05*ax[2])
-        des2[3] = np.clip(des2[3]-0.05*ax[3], 0.0, 2.5)
-        b.set_des(des2, 1)
+    if on1: b.set_cmd(cmd, 0)
+    elif on2: b.set_cmd(cmd, 1)
 
-    """
+
     # show the video feeds
-    I1 = b1.get_image()
-    I2 = b2.get_image()
+    I1 = b.get_image(0)
+    I2 = b.get_image(1)
     
     axes[0].clear()
     axes[0].imshow(I1)
@@ -72,6 +63,6 @@ while running:
 
     # break if the figure is closed
     if not plt.fignum_exists(fig.number): running = False
-    """
+
 
 b.shutdown()

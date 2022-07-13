@@ -5,11 +5,69 @@ import time
 from multiprocessing import shared_memory as sm
 from pyBlimp._controller import handle_controller
 from pyBlimp.utils import *
+from pyBlimp.ser_utils import serManager
+
+class BlimpManager:
+    def __init__(self, cfg, port, logger=False):
+        N = len(cfg)
+
+        # generate a single serial manager
+        self._S = serManager()
+        interfaces = self._S.start(port, N)
+
+        # generate all blimps
+        self._blimps = []
+        for n in range(N):
+            self._blimps.append(Blimp(interfaces[n], cfg[n], logger=logger))
+
+        # calibrate all blimps
+        for n in range(N):
+            self.zero_xy_rot(n)
+            self.zero_z_rot(n)
+       
+    def shutdown(self):
+        # shutdown blimps
+        for b in self._blimps:
+            b.shutdown()
+
+        # shutdown serial
+        self._S.shutdown()
+ 
+    def get_image(self, idx=0):
+        return self._blimps[idx].get_image()
+
+    def get_state(self, idx=0):
+        return self._blimps[idx].get_state()
+
+    def get_euler(self, idx=0):
+        return self._blimps[idx].get_euler()
+
+    def get_veuler(self, idx=0):
+        return self._blimps[idx].get_veuler()
+
+    def get_accel(self, idx=0):
+        return self._blimps[idx].get_accel()
+
+    def get_alt(self, idx=0):
+        return self._blimps[idx].get_alt()
+
+    def set_des(self, des, idx=0):
+        return self._blimps[idx].set_des(des)
+
+    def set_cmd(self, cmd, idx=0):
+        return self._blimps[idx].set_cmd(cmd)
+
+    def zero_xy_rot(self, idx=0):
+        return self._blimps[idx].zero_xy_rot()
+        
+    def zero_z_rot(self, idx=0):
+        return self._blimps[idx].zero_z_rot()
+
 
 class Blimp:
     def __init__(self, ser, cfg, motors_only=False, logger=False):
         """ Main interfacing class for a user to control a single blimp
-            - ser is a serial object produced from pySerial
+            - ser is a serManager interface (lock and sm to write cmd to)
             - cfg is a dict containing parameters for starting the blimp
         """
         
@@ -58,23 +116,20 @@ class Blimp:
         self.sh_run = sm.SharedMemory(create=True, size=1)
         self.run = np.ndarray(1, dtype=np.bool_, buffer=self.sh_run.buf)
         self.run[0] = True
+        self.sh_reported = sm.SharedMemory(create=True, size=1)
 
         # start the controller process
         locks = (self.lock_x, self.lock_I, self.lock_des, self.lock_rot0, self.lock_cmd)
              
         names = (self.sh_x.name, self.sh_x_stamp.name, self.sh_img.name, 
                  self.sh_img_stamp.name, self.sh_des.name, self.sh_rot0.name,
-                 self.sh_man.name, self.sh_cmd.name, self.sh_run.name)
+                 self.sh_man.name, self.sh_cmd.name, self.sh_run.name,
+                 self.sh_reported.name)
 
         args = (ser, cfg, locks, names, logger)
 
         self.pcontroller = mp.Process(target=handle_controller, args=args)
         self.pcontroller.start()
-
-        # set the zeros (wait a bit to make sure data is available)
-        time.sleep(1.0)
-        self.zero_xy_rot()
-        self.zero_z_rot()
 
     # shutdown operation
     def shutdown(self):
@@ -92,6 +147,7 @@ class Blimp:
         self.sh_man.close()
         self.sh_cmd.close()
         self.sh_run.close()
+        self.sh_reported.close()
 
         self.sh_x.unlink()
         self.sh_x_stamp.unlink()
@@ -102,6 +158,7 @@ class Blimp:
         self.sh_man.unlink()
         self.sh_cmd.unlink()
         self.sh_run.unlink()
+        self.sh_reported.unlink()
 
     # user-interface
     def get_image(self):
@@ -214,7 +271,10 @@ class Blimp:
             - the zero angle which is used to correct all measurements
             - for user interfacing and for blimp stabilization
         """
-        
+
+        # wait until data has been reported
+        while not self.sh_reported.buf[0] and not self.run[0]: pass
+                
         # protected read
         [r, p, _] = self.get_euler()
 
@@ -228,6 +288,9 @@ class Blimp:
             - which is used to correct all measurements for user 
             - interfacing and for blimp stabilization
         """
+
+        # wait until data has been reported
+        while not self.sh_reported.buf[0] and not self.run[0]: pass
         
         # protected read
         [_, _, yw] = self.get_euler()

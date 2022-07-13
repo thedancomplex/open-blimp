@@ -12,7 +12,7 @@ pi_ = MultiRcv(cfg)
 
 # show the image
 fig, ax = plt.subplots(1,1)
-    
+
 # setup exit on ctrl-c
 running = True
 def exit_handle(signum, frame):
@@ -31,7 +31,7 @@ while running:
     ax.set_yticks([])
     ax.set_title("FPV")
     plt.draw(); plt.pause(0.02)
-    plt.imsave('saved_video/'+str(n).zfill(6)+'.jpg', I)
+    #plt.imsave('saved_video/'+str(n).zfill(6)+'.jpg', I)
     n += 1
 
     # break if the figure is closed

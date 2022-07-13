@@ -10,7 +10,7 @@ class JoyStick_helper:
         pygame.joystick.init()
         self.js = pygame.joystick.Joystick(js_id)
         
-        self.dead = 0.2
+        self.dead = 0.4
 
     def get_state(self):
         pygame.event.pump()
@@ -19,11 +19,11 @@ class JoyStick_helper:
         rlr = self.js.get_axis(2)
         rud = self.js.get_axis(3)
         
-        llr = llr*(not (abs(llr) < self.dead))
-        lud = lud*(not (abs(lud) < self.dead))
-        rlr = rlr*(not (abs(rlr) < self.dead))
-        rud = rud*(not (abs(rud) < self.dead))
-        
+        llr *= not (abs(llr) < self.dead)
+        lud *= not (abs(lud) < self.dead)
+        rlr *= not (abs(rlr) < self.dead)
+        rud *= not (abs(rud) < self.dead)
+
         lshoulder = self.js.get_button(4)
         rshoulder = self.js.get_button(5)
 

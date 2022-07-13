@@ -3,19 +3,17 @@ import numpy as np
 import signal
 import time
 
-from pyBlimp.blimp import Blimp
+from pyBlimp.blimp import BlimpManager
 from pyBlimp.utils import *
 from utils.js_utils import JoyStick_helper
 
 
-# create serial device and lock pair
-ser = create_serial("/dev/ttyUSB0")
-
 # load desired configs
-cfg = read_config("config.yaml")
+cfg_paths = ["configs/config1.yaml"]
+cfg = read_config(cfg_paths)
 
 # build the blimp object
-b = Blimp(ser, cfg, logger=False)
+b = BlimpManager(cfg, "/dev/ttyUSB0")
 
 # setup the joystick reader
 js = JoyStick_helper()
@@ -39,14 +37,14 @@ while running:
     ax, _, _ = js.get_state()
     
     # decide inputs
-    des[0] = -0.05*ax[0]
+    des[0] = 0.5#-0.05*ax[0]
     des[1] =  0.05*ax[1]
     des[2] = wrap(des[2]+0.05*ax[2])
     des[3] = np.clip(des[3]-0.05*ax[3], 0.0, 2.5)
-    b.set_des(des)
+    b.set_des(des, 0)
 
     # show the video
-    I = b.get_image()
+    I = b.get_image(0)
     axes.clear()
     axes.imshow(I)
     axes.set_xticks([])

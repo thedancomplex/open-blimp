@@ -1,9 +1,7 @@
-import multiprocessing as mp
+import os
 import numpy as np
-import serial
 import yaml
 
-from multiprocessing import shared_memory as sm
 from numpy import pi
 from scipy.spatial.transform import Rotation as R
 
@@ -15,15 +13,10 @@ def wrap(ang):
 def quat2euler(quat):
     return R.from_quat(quat).as_euler('xyz')
 
-
-def create_serial(port):
-    ser = serial.Serial()
-    ser.port = port
-    ser.baudrate = 921600
-    ser.write_timeout = 0
-    ser.open()
-    return (ser, mp.Lock())
     
-def read_config(path):
-    return yaml.safe_load(open(path))
+def read_config(paths):
+    cfg = []
+    for p in paths:
+        cfg.append(yaml.safe_load(open(p)))
         
+    return cfg

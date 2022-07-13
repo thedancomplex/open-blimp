@@ -35,9 +35,9 @@ class _Controller:
         self.logger = logger
         self.hz = 100.
 
-        # store serial data
-        self.ser = ser[0]
-        self.lock_u = ser[1]
+        # store serManager interface
+        self.lock_ser = ser[0]
+        self.cmd_ser = sm.SharedMemory(ser[1])
         
         # store locks and setup shared memory
         self.lock_x = locks[0]
@@ -68,16 +68,17 @@ class _Controller:
 
         self.sh_run = sm.SharedMemory(names[8])
         self.running = np.ndarray(1, dtype=np.bool_, buffer=self.sh_run.buf)
+        self.sh_reported = sm.SharedMemory(names[9])
 
         # setup sensing tools (and sleep to read some data)
         self.pi = MultiRcv(cfg)
         
         # construct lowest-level PID controllers
         self.positive_only = True
-        k_r  = np.array([0.0, 0.0, 0.0])
-        k_p  = np.array([0.0, 0.0, 0.0])
-        k_yw = np.array([0.0, 0.0, 0.0])
-        k_pz = np.array([0.0, 0.0, 0.0])
+        k_r  = np.array(cfg['k_r'])
+        k_p  = np.array(cfg['k_p'])
+        k_yw = np.array(cfg['k_yw'])
+        k_pz = np.array(cfg['k_pz'])
         self.pid_roll  = PID(k_r,  angle=True)
         self.pid_pitch = PID(k_p,  angle=True)
         self.pid_yaw   = PID(k_yw, angle=True)
@@ -123,6 +124,8 @@ class _Controller:
         self.sh_man.close()
         self.sh_cmd.close()
         self.sh_run.close()
+        self.sh_reported.close()
+        self.cmd_ser.close()
 
         # return if logger flag not active        
         if not self.logger: return
@@ -164,6 +167,7 @@ class _Controller:
 
         if bno is not None:
             # protected read
+            self.sh_reported.buf[0] = True
             self.lock_rot0.acquire()
             rot0 = self.rot0.copy()
             self.lock_rot0.release()
@@ -222,10 +226,11 @@ class _Controller:
             p_  = np.array([eul[1], veul[1]])
             yw_ = np.array([eul[2], veul[2]])
             
+
             u[0] = -self.pid_pitch.input(p_, des[1], given_velocity=True)
-            u[1] =  self.pid_roll.input(r_, des[0], given_velocity=True)
+            u[1] = -self.pid_roll.input(r_, des[0], given_velocity=True)
             u[2] = -self.pid_pz.input(z, des[3])
-            u[5] =  self.pid_yaw.input(yw_, des[2], given_velocity=True)
+            u[5] = -self.pid_yaw.input(yw_, des[2], given_velocity=True)
 
             if self.positive_only:
                 u[2] = min(u[2], 0.)
@@ -249,7 +254,10 @@ class _Controller:
         for val in msg:
             msgb += struct.pack('!B', int(val))
 
-        self.ser.write(msgb)
+        # try to write a command unless already occupied
+        self.lock_ser.acquire()
+        self.cmd_ser.buf[:] = msgb
+        self.lock_ser.release()
         
         # log data (if requested)
         if self.logger:
@@ -262,4 +270,3 @@ class _Controller:
             self.xh.append(x_.copy())
             self.Ih.append(I.copy())
             self.th.append(self.x_stamp[0].copy())
-
