@@ -87,6 +87,7 @@ class _Controller:
         # setup logger
         if self.logger:
             self.idx = 0
+            self.dh = []
             self.uh = []
             self.xh = []
             self.Ih = []
@@ -132,12 +133,14 @@ class _Controller:
 
         # save data to directory
         tsave = str(np.datetime64('now'))        
-        usave = os.path.join(tsave, "inputs.npy")
-        xsave = os.path.join(tsave, "states.npy")
-        Isave = os.path.join(tsave, "images.npy")
-        Ssave = os.path.join(tsave, "stamps.npy")
+        dsave = "targets.npy"
+        usave = "inputs.npy"
+        xsave = "states.npy"
+        Isave = "images.npy"
+        Ssave = "stamps.npy"
 
         # concatenate to 2D arrays
+        dh = np.stack(self.dh).T
         uh = np.stack(self.uh).T
         xh = np.stack(self.xh).T
         Ih = np.stack(self.Ih)
@@ -145,19 +148,25 @@ class _Controller:
 
         # check if save_dir exists first
         save_dir = "data"
-        spec_dir = os.path.join(save_dir, tsave)
+        save_unique_dir = os.path.join(save_dir, "blimp"+str(self.id_num))
+        spec_dir = os.path.join(save_unique_dir, tsave)
         if not os.path.isdir(save_dir):
             os.mkdir(save_dir)
+
+        # check if unique_dir exists first
+        if not os.path.isdir(save_unique_dir):
+            os.mkdir(save_unique_dir)
 
         # check if specific_dir exists first
         if not os.path.isdir(spec_dir):
             os.mkdir(spec_dir)
-                
+
         # save blimp data
-        np.save(os.path.join(save_dir, usave), uh[:,:self.idx])
-        np.save(os.path.join(save_dir, xsave), xh[:,:self.idx])
-        np.save(os.path.join(save_dir, Isave), Ih[:,:,:,:self.idx])
-        np.save(os.path.join(save_dir, Ssave), sh[:self.idx])
+        np.save(os.path.join(spec_dir, dsave), dh[:,:self.idx])
+        np.save(os.path.join(spec_dir, usave), uh[:,:self.idx])
+        np.save(os.path.join(spec_dir, xsave), xh[:,:self.idx])
+        np.save(os.path.join(spec_dir, Isave), Ih[:,:,:,:self.idx])
+        np.save(os.path.join(spec_dir, Ssave), sh[:self.idx])
         
     # interfacing with pi
     def poll(self):
@@ -165,9 +174,8 @@ class _Controller:
         stamp, bno = self.pi.get_bno()
         _, z = self.pi.get_dis()
 
-        if bno is not None:
+        if bno[0][3] != -1.:
             # protected read
-            self.sh_reported.buf[0] = True
             self.lock_rot0.acquire()
             rot0 = self.rot0.copy()
             self.lock_rot0.release()
@@ -185,6 +193,8 @@ class _Controller:
             self.x[9]   = -bno[2][2]       # zacc
             self.x_stamp[0] = stamp
             self.lock_x.release()
+
+            self.sh_reported.buf[0] = True
 
         # get most recent image
         stamp, I = self.pi.get_image()
@@ -218,6 +228,9 @@ class _Controller:
             
         # autopilot flight control                    
         else:   
+            # check if data has arrived
+            if not self.sh_reported.buf[0]: return
+
             # get altitude, roll, pitch, yaw and velocities
             z, eul, veul = x_[0], x_[1:4], x_[4:7]
 
@@ -225,12 +238,16 @@ class _Controller:
             r_  = np.array([eul[0], veul[0]])
             p_  = np.array([eul[1], veul[1]])
             yw_ = np.array([eul[2], veul[2]])
-            
 
-            u[0] = -self.pid_pitch.input(p_, des[1], given_velocity=True)
-            u[1] = -self.pid_roll.input(r_, des[0], given_velocity=True)
-            u[2] = -self.pid_pz.input(z, des[3])
-            u[5] = -self.pid_yaw.input(yw_, des[2], given_velocity=True)
+            des_r_ = np.array([des[0], 0.])
+            des_p_ = np.array([des[1], 0.])
+            des_yw_ = np.array([des[2], 0.])
+            des_z_ = des[3]
+
+            u[0] = self.pid_pitch.input(p_, des_p_, given_velocity=True)
+            u[1] = self.pid_roll.input(r_, des_r_, given_velocity=True)
+            u[2] = -self.pid_pz.input(z, des_z_)
+            u[5] = -self.pid_yaw.input(yw_, des_yw_, given_velocity=True)
 
             if self.positive_only:
                 u[2] = min(u[2], 0.)
@@ -266,6 +283,7 @@ class _Controller:
             self.lock_I.release()
         
             self.idx += 1
+            self.dh.append(des.copy())
             self.uh.append(u.copy())
             self.xh.append(x_.copy())
             self.Ih.append(I.copy())

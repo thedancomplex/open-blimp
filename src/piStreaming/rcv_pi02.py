@@ -35,8 +35,9 @@ class MultiRcv:
         self.flag = np.ndarray(1, dtype=np.bool_, buffer=self.sh_flag.buf)
         self.flag[0] = True
         
-        # make proper quaternion
-        self.bno[3] = 1.
+        # initial error to indicate no data
+        self.bno[3] = -1.
+        self.dis[0] = -1.
 
         # setup locks for shared memory access
         self.lock_img = mp.Lock()

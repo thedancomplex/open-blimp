@@ -10,7 +10,7 @@ Software changes:
 - Parallel angle control from base using multiprocessing
 - Using BNO055 library https://github.com/adafruit/Adafruit_Python_BNO055 instead due to integration issues with updated RPi02w
 - data is now requested from base station without sshing into pi
-- option to install startup script to automatically stream on boot
+- option to install startup script to automatically stream on boot (runs on a screen)
 
 
 Blimp Orientation: facing from directly behind the camera with the altitude sensor pointing down

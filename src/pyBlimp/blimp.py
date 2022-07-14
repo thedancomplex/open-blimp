@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import numpy as np
+import signal
 import time
 
 from multiprocessing import shared_memory as sm
@@ -32,7 +33,10 @@ class BlimpManager:
 
         # shutdown serial
         self._S.shutdown()
- 
+
+    def get_running(self, idx=0):
+        return self._blimps[idx].get_running()
+
     def get_image(self, idx=0):
         return self._blimps[idx].get_image()
 
@@ -131,6 +135,11 @@ class Blimp:
         self.pcontroller = mp.Process(target=handle_controller, args=args)
         self.pcontroller.start()
 
+        signal.signal(signal.SIGINT, self.handler)
+
+    def handler(self, signum, frame):
+        self.run[0] = False
+
     # shutdown operation
     def shutdown(self):
         # set shutdown flag
@@ -161,6 +170,9 @@ class Blimp:
         self.sh_reported.unlink()
 
     # user-interface
+    def get_running(self):
+        return self.run[0]
+
     def get_image(self):
         # protected read
         self.lock_I.acquire()
@@ -237,7 +249,7 @@ class Blimp:
         """
     
         # limit the desired states to appropriate space    
-        des[0] = np.clip(des[0], 0.0, 2.5)
+        des[3] = np.clip(des[3], 0.0, 2.5)
         des[1:] = wrap(des[1:])
         
         # engage auto mode (no lock needed)
@@ -273,8 +285,8 @@ class Blimp:
         """
 
         # wait until data has been reported
-        while not self.sh_reported.buf[0] and not self.run[0]: pass
-                
+        while not self.sh_reported.buf[0] and self.run[0]: pass
+
         # protected read
         [r, p, _] = self.get_euler()
 
@@ -290,8 +302,8 @@ class Blimp:
         """
 
         # wait until data has been reported
-        while not self.sh_reported.buf[0] and not self.run[0]: pass
-        
+        while not self.sh_reported.buf[0] and self.run[0]: pass
+
         # protected read
         [_, _, yw] = self.get_euler()
 

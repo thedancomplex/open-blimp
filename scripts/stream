@@ -11,7 +11,7 @@
 # Description:       A simple script  which will start a program from boot and stop upon shut-down
 ### END INIT INFO
 
-python3 /home/pi/open-blimp/src/piStreaming/stream_pi02.py
+screen -dm bash -c 'python3 /home/pi/open-blimp/src/piStreaming/stream_pi02.py'
 
 exit 0
 ;;

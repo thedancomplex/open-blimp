@@ -128,9 +128,9 @@ class _Rcv:
             con.write(data)
             con.flush()
             con.close()
-
+            print("Ending! Putting blimp", self.cfg['id_num'], "to sleep...")
         else: 
-            print("Connection to ", self.cfg['pi_ip'], " failed! Skipping shutdown request...")
+            print("Connection to ", self.cfg['pi_ip'], " failed! Skipping sleep request...")
         
     def handler(self, signum, frame):
         # - ctrl-c handler to start process cleanup

@@ -24,6 +24,11 @@ class JoyStick_helper:
         rlr *= not (abs(rlr) < self.dead)
         rud *= not (abs(rud) < self.dead)
 
+        llr += self.dead*(llr < 0) - self.dead*(llr > 0)
+        lud += self.dead*(lud < 0) - self.dead*(lud > 0)
+        rlr += self.dead*(rlr < 0) - self.dead*(rlr > 0)
+        rud += self.dead*(rud < 0) - self.dead*(rud > 0)
+
         lshoulder = self.js.get_button(4)
         rshoulder = self.js.get_button(5)
 

@@ -4,5 +4,6 @@ build/
 dist/
 *.egg-info/
 examples/js/utils/__pycache__/
+examples/js/data/
 examples/bl_track/
 examples/tag_track/
