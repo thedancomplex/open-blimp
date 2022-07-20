@@ -1,4 +1,4 @@
-name: openBlimp
+name: openBlimpOld
 channels:
 - menpo
 - defaults

@@ -36,7 +36,7 @@ for t in range(T):
     ctrl_u.append(np.array(ax))
     
     cmd = None
-    if toggle_state:
+    if True:
         if b.pi.bno_new:
             # update states from the pi
             b.poll_bno()
