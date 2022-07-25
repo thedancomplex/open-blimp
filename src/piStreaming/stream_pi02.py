@@ -255,17 +255,17 @@ class MultiStream:
                     # write the length of the capture
                     buf_len = struct.pack('<L', buf.tell())
                     cam_connection.write(buf_len)
-                    cam_connection.flush()
+                    # cam_connection.flush()
 
                     # write the image data
                     buf.seek(0)
                     cam_connection.write(buf.read())
-                    cam_connection.flush()
+                    # cam_connection.flush()
 
                     # write the current time
                     tbuf = struct.pack('<d', tframe)
                     cam_connection.write(tbuf)
-                    cam_connection.flush()
+                    # cam_connection.flush()
 
                     # delete buffer
                     buf.seek(0)
@@ -279,6 +279,7 @@ class MultiStream:
             sock.close()
             sock = socket.socket()
             sock.settimeout(1)
+            time.sleep(1)
 
         # cleanup
         sock.close()
