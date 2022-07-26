@@ -5,6 +5,7 @@ import signal
 import socket
 import struct
 import time
+import traceback
 
 from multiprocessing import shared_memory as sm
 
@@ -17,14 +18,14 @@ class MultiStream:
         self.pdis = None
 
         # setup shared memory
-        self.sh_t0 = sm.SharedMemory(create=True, size=8)
+        self.sh_t0 = sm.SharedMemory(create=True, size=24)
         self.sh_ip = sm.SharedMemory(create=True, size=4)
         self.sh_c_port = sm.SharedMemory(create=True, size=2)
         self.sh_b_port = sm.SharedMemory(create=True, size=2)
         self.sh_d_port = sm.SharedMemory(create=True, size=2)
         self.sh_params = sm.SharedMemory(create=True, size=8)
 
-        self.t0 = np.ndarray(1, dtype=np.float32, buffer=self.sh_t0.buf)
+        self.t0 = np.ndarray(1, dtype=np.float64, buffer=self.sh_t0.buf)
         self.ip = np.ndarray(4, dtype=np.uint8, buffer=self.sh_ip.buf)
         self.c_port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_c_port.buf)
         self.b_port = np.ndarray(1, dtype=np.uint16, buffer=self.sh_b_port.buf)
@@ -136,10 +137,13 @@ class MultiStream:
                     self.params[3] = data[10]
                     self.p_lock.release()
 
-                    # start streams
+                    # (re)start streams
+                    self.flag[0] = False
+                    time.sleep(1)
                     self.t_lock.acquire()
                     self.t0[0] = time.time()
                     self.t_lock.release()
+                    print(self.t0[0])
                     self.flag[0] = True
 
                     print("Connected to", ".".join(map(str, ip)))
@@ -190,14 +194,11 @@ class MultiStream:
         sh_params = sm.SharedMemory(names[3])
         sh_flag = sm.SharedMemory(names[4])
 
-        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)
+        t0 = np.ndarray(1, dtype=np.float64, buffer=sh_t0.buf)
         ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         params = np.ndarray(4, dtype=np.uint16, buffer=sh_params.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
-
-        sock = socket.socket()
-        sock.settimeout(1)
 
         # shutdown flag
         while flag[1]:
@@ -211,13 +212,16 @@ class MultiStream:
             locks[2].release()
 
             # connect to the server
+            sock = socket.socket()
+            sock.settimeout(2)
+
             connected = False
             while not connected and flag[0]:
                 try:
                     sock.connect((ip_, port_[0]))
                     connected = True
 
-                except: pass
+                except: print("Waiting for camera server...")
 
             # return prematurely if stopped early
             if not connected:
@@ -255,30 +259,28 @@ class MultiStream:
                     # write the length of the capture
                     buf_len = struct.pack('<L', buf.tell())
                     cam_connection.write(buf_len)
-                    # cam_connection.flush()
+                    cam_connection.flush()
 
                     # write the image data
                     buf.seek(0)
                     cam_connection.write(buf.read())
-                    # cam_connection.flush()
+                    cam_connection.flush()
 
                     # write the current time
                     tbuf = struct.pack('<d', tframe)
                     cam_connection.write(tbuf)
-                    # cam_connection.flush()
+                    cam_connection.flush()
 
                     # delete buffer
                     buf.seek(0)
                     buf.truncate()
 
                 except:
-                    break
+                    traceback.print_exc()
 
             # prep for next call
             cam.close()
             sock.close()
-            sock = socket.socket()
-            sock.settimeout(1)
             time.sleep(1)
 
         # cleanup
@@ -308,7 +310,7 @@ class MultiStream:
         sh_port = sm.SharedMemory(names[2])
         sh_flag = sm.SharedMemory(names[3])
 
-        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)
+        t0 = np.ndarray(1, dtype=np.float64, buffer=sh_t0.buf)
         ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
@@ -322,7 +324,7 @@ class MultiStream:
             locks[0].acquire()
             t0_ = t0[0]
             locks[0].release()
-
+            print(t0_)
             locks[1].acquire()
             ip_ = ip[:]
             locks[1].release()
@@ -341,7 +343,7 @@ class MultiStream:
                 gyro = sensor.read_gyroscope()
                 acc  = sensor.read_linear_acceleration()
                 tframe = time.time() - t0_
-
+                print(tframe)
                 bno_packet = quat + gyro + acc + (tframe,)
 
                 bno_bytes = struct.pack("<11d", *bno_packet)
@@ -376,7 +378,7 @@ class MultiStream:
         sh_port = sm.SharedMemory(names[2])
         sh_flag = sm.SharedMemory(names[3])
 
-        t0 = np.ndarray(1, dtype=np.float32, buffer=sh_t0.buf)
+        t0 = np.ndarray(1, dtype=np.float64, buffer=sh_t0.buf)
         ip = np.ndarray(4, dtype=np.uint8, buffer=sh_ip.buf)
         port = np.ndarray(1, dtype=np.uint16, buffer=sh_port.buf)
         flag = np.ndarray(2, dtype=np.bool_, buffer=sh_flag.buf)
