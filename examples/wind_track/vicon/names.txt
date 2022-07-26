@@ -1,0 +1,3 @@
+/vicon/openBlimp1/openBlimp1
+/vicon/tag0/tag0
+/vicon/fan/fan

@@ -7,20 +7,6 @@ from pyBlimp.blimp import BlimpManager
 from pyBlimp.utils import *
 from utils.js_utils import JoyStick_helper
 
-
-# load desired configs
-cfg_paths = ["configs/config1.yaml"]
-cfg = read_config(cfg_paths)
-
-# build the blimp object
-b = BlimpManager(cfg, "/dev/ttyUSB0")
-
-# setup the joystick reader
-js = JoyStick_helper()
-
-# show the FPV
-fig, axes = plt.subplots(1,1)
-
 # setup exit on ctrl-c
 running = True
 def exit_handle(signum, frame):
@@ -29,19 +15,34 @@ def exit_handle(signum, frame):
     
 signal.signal(signal.SIGINT, exit_handle)
 
+
+
+# load desired configs
+cfg_paths = ["configs/config2.yaml"]
+cfg = read_config(cfg_paths)
+
+# build the blimp object
+b = BlimpManager(cfg, "/dev/ttyUSB0", logger=True)
+
+# setup the joystick reader
+js = JoyStick_helper()
+
+# show the FPV
+fig, axes = plt.subplots(1,1)
+
 # desired states to track
 des = np.zeros(4)
-des[3] = 0.5
+des[3] = 1.5
 
 while running and b.get_running(0):
     # handle the joystick
     ax, _, _ = js.get_state()
     
     # decide inputs
-    des[0] =  0.2*ax[0]
-    des[1] =  -0.2*ax[1]
+    des[0] =  0.5*ax[0]
+    des[1] =  0.5*ax[1]
     des[2] = wrap(des[2]-0.05*ax[2])
-    des[3] = np.clip(des[3]-0.05*ax[3], 0.0, 2.5)
+    des[3] = np.clip(des[3]+0.05*ax[3], 0.0, 2.5)
     b.set_des(des, 0)
 
     # show the video

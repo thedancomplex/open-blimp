@@ -59,7 +59,7 @@ class serManager:
             for c in cmds:
                 c[0].acquire()
                 msgb = bytes(c[1].buf[:])
-                if msgb[-2] > 0: ser.write(bytes(c[1].buf[:]))                    
+                ser.write(bytes(c[1].buf[:]))                    
                 c[0].release()                
 
         # cleanup

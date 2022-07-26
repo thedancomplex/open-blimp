@@ -19,13 +19,15 @@ class BlimpManager:
         # generate all blimps
         self._blimps = []
         for n in range(N):
+            print("Creating blimp", n)
             self._blimps.append(Blimp(interfaces[n], cfg[n], logger=logger))
 
         # calibrate all blimps
         for n in range(N):
+            print("Calibrating", n)
             self.zero_xy_rot(n)
             self.zero_z_rot(n)
-       
+
     def shutdown(self):
         # shutdown blimps
         for b in self._blimps:
@@ -54,6 +56,9 @@ class BlimpManager:
 
     def get_alt(self, idx=0):
         return self._blimps[idx].get_alt()
+
+    def set_extra(self, name, extra, idx=0):
+        return self._blimps[idx].set_extra(name, extra)
 
     def set_des(self, des, idx=0):
         return self._blimps[idx].set_des(des)
@@ -130,22 +135,46 @@ class Blimp:
                  self.sh_man.name, self.sh_cmd.name, self.sh_run.name,
                  self.sh_reported.name)
 
-        args = (ser, cfg, locks, names, logger)
+        extras = ()
+        self.lock_extra = dict()
+        self.sh_extra = dict()
+        self.extra = dict()
 
+        if "extra_names" in cfg:
+            for idx in range(len(cfg["extra_names"])):
+                lock  = mp.Lock()
+                name  = cfg["extra_names"][idx]
+                size  = cfg["extra_sizes"][idx]
+                dtype = cfg["extra_types"][idx]
+                sm_size = size
+                if dtype == "float32":
+                    dtype = np.float32
+                    sm_size *= 4
+
+                if dtype == "bool":
+                    dtype = np.bool_
+
+                self.lock_extra[name] = lock
+                self.sh_extra[name] = sm.SharedMemory(create=True, size=sm_size)
+                self.extra[name] = np.ndarray(size, dtype=dtype, buffer=self.sh_extra[name].buf)
+                
+                sm_name = self.sh_extra[name].name
+                extras += ((name, sm_name, size, dtype, lock),)
+
+        args = (ser, cfg, locks, names, extras, logger)
         self.pcontroller = mp.Process(target=handle_controller, args=args)
         self.pcontroller.start()
 
-        signal.signal(signal.SIGINT, self.handler)
-
-    def handler(self, signum, frame):
-        self.run[0] = False
-
     # shutdown operation
     def shutdown(self):
+        # set to zeros to keep from flying away
+        self.set_cmd([0.,0.,0.,0.])
+
         # set shutdown flag
         self.run[0] = False
+        print("Shutting down blimp")
         self.pcontroller.join()
-
+        print("joined!")
         # cleanup shared memory
         self.sh_x.close()
         self.sh_x_stamp.close()
@@ -168,6 +197,10 @@ class Blimp:
         self.sh_cmd.unlink()
         self.sh_run.unlink()
         self.sh_reported.unlink()
+
+        for key in self.sh_extra:
+            self.sh_extra[key].close()
+            self.sh_extra[key].unlink()
 
     # user-interface
     def get_running(self):
@@ -237,6 +270,16 @@ class Blimp:
         # correct altitude and return
         eul = blimp_coordinates(euler(x_[1:5]), self.rot0.copy())
         return x_[0]*np.cos(eul[0])*np.cos(eul[1])
+
+    def set_extra(self, name, extra):
+        """ sets additional data for the blimp to time-sync for post-processing
+            - name is a string-key matching the config file
+            - extra is a np array of correct size and type            
+        """
+        # protected write                        
+        self.lock_extra[name].acquire()
+        self.extra[name][:] = extra
+        self.lock_extra[name].release()
 
     def set_des(self, des):
         """ set the desired local frame states for the blimp to track

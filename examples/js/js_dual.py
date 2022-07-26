@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import signal
+import time
 
 from pyBlimp.blimp import BlimpManager
 from pyBlimp.utils import *
 from utils.js_utils import JoyStick_helper
-
 
 # setup exit on ctrl-c
 running = True
@@ -15,63 +15,47 @@ def exit_handle(signum, frame):
     
 signal.signal(signal.SIGINT, exit_handle)
 
+
+
 # load desired configs
-cfg_paths = ["configs/config1.yaml", "configs/config2.yaml"]
+cfg_paths = ["configs/config1.yaml"]
 cfg = read_config(cfg_paths)
 
-# build the blimp manager
+# build the blimp object
 b = BlimpManager(cfg, "/dev/ttyUSB0")
 
 # setup the joystick reader
 js = JoyStick_helper()
 
 # show the FPV
-#fig, axes = plt.subplots(1,2,figsize=(11,5))
+fig, axes = plt.subplots(1,1)
 
 # desired states to track
-des1 = np.zeros(4)
-des2 = np.zeros(4)
+des = np.zeros(4)
+des[3] = 1.5
 
-while running:
+while running and b.get_running(0):
     # handle the joystick
-    ax, on1, on2 = js.get_state()
-
-    # decide inputs    
-    if on1:
-        des1[0] = -0.05*ax[0]
-        des1[1] =  0.05*ax[1]
-        des1[2] = wrap(des1[2]+0.05*ax[2])
-        des1[3] = np.clip(des1[3]-0.05*ax[3], 0.0, 2.5)
-        b.set_des(des1, 0)
-
-    elif on2:
-        des2[0] = -0.05*ax[0]
-        des2[1] =  0.05*ax[1]
-        des2[2] = wrap(des2[2]+0.05*ax[2])
-        des2[3] = np.clip(des2[3]-0.05*ax[3], 0.0, 2.5)
-        b.set_des(des2, 1)
-
-    """
-    # show the video feeds
-    I1 = b1.get_image()
-    I2 = b2.get_image()
+    ax, _, _ = js.get_state()
     
-    axes[0].clear()
-    axes[0].imshow(I1)
-    axes[0].set_xticks([])
-    axes[0].set_yticks([])
-    axes[0].set_title("FPV - Blimp 1")
-    
-    axes[1].clear()
-    axes[1].imshow(I2)
-    axes[1].set_xticks([])
-    axes[1].set_yticks([])
-    axes[1].set_title("FPV - Blimp 2")
+    # decide inputs
+    des[0] =  0.1*ax[0]
+    des[1] =  0.1*ax[1]
+    des[2] = wrap(des[2]-0.05*ax[2])
+    des[3] = np.clip(des[3]+0.05*ax[3], 0.0, 2.5)
+    b.set_des(des, 0)
+
+    # show the video
+    I = b.get_image(0)
+    axes.clear()
+    axes.imshow(I)
+    axes.set_xticks([])
+    axes.set_yticks([])
+    axes.set_title("FPV")
 
     plt.draw(); plt.pause(0.0001)
 
     # break if the figure is closed
     if not plt.fignum_exists(fig.number): running = False
-    """
 
 b.shutdown()

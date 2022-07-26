@@ -1,0 +1,8 @@
+/vicon/openBlimp1/openBlimp1
+/vicon/openBlimp2/openBlimp2
+/vicon/tag0/tag0
+/vicon/tag1/tag1
+/vicon/tag2/tag2
+/vicon/tag3/tag3
+/vicon/tag4/tag4
+/vicon/tag5/tag5
