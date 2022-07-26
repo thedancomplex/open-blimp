@@ -4,6 +4,7 @@ import os
 import signal
 import struct
 import time
+import traceback
 
 from multiprocessing import shared_memory as sm
 from numpy import pi
@@ -14,14 +15,13 @@ from pyBlimp.utils import *
 from scipy.spatial.transform import Rotation as R
 
 
-def handle_controller(ser, cfg, locks, names, logger):
+def handle_controller(ser, cfg, locks, names, extras, logger):
     """ private controller handler spawned by a parent Blimp object
         - this handle should NOT be used by an application
         - only spawned and controlled by a parent Blimp object    
     """
-    C = _Controller(ser, cfg, locks, names, logger)
+    C = _Controller(ser, cfg, locks, names, extras, logger)
     C.run()
-
 
 class _Controller:
     """ private controller that runs on a spawned process to control the blimp
@@ -29,7 +29,7 @@ class _Controller:
         - only spawned and controlled by a parent Blimp object    
     """
 
-    def __init__(self, ser, cfg, locks, names, logger=False):
+    def __init__(self, ser, cfg, locks, names, extras, logger=False):
         im_sz = (cfg['im_rows'], cfg['im_cols'], 3)
         self.id_num = cfg['id_num']
         self.logger = logger
@@ -70,9 +70,22 @@ class _Controller:
         self.running = np.ndarray(1, dtype=np.bool_, buffer=self.sh_run.buf)
         self.sh_reported = sm.SharedMemory(names[9])
 
+        # setup extra shared memory
+        self.sh_extra = dict()
+        self.extra = dict()
+        self.lock_extra = dict()
+
+        for e in extras:
+            name = e[0]
+            sh_extra = sm.SharedMemory(e[1])
+            extra = np.ndarray(e[2], dtype=e[3], buffer=sh_extra.buf)
+            self.sh_extra[name] = sh_extra
+            self.extra[name] = extra
+            self.lock_extra[name] = e[4]
+
         # setup sensing tools (and sleep to read some data)
         self.pi = MultiRcv(cfg)
-        
+
         # construct lowest-level PID controllers
         self.positive_only = True
         k_r  = np.array(cfg['k_r'])
@@ -86,30 +99,37 @@ class _Controller:
 
         # setup logger
         if self.logger:
-            self.idx = 0
             self.dh = []
             self.uh = []
             self.xh = []
             self.Ih = []
+            self.It = []
             self.th = []
+
+            self.eh = dict()
+            for e in extras:
+                self.eh[e[0]] = []
 
         # setup control-c handler
         signal.signal(signal.SIGINT, self.handler)
-
+        self.i = 0
     def handler(self, signum, frame):
         # - ctrl-c handler to start process cleanup
         self.running[0] = False
 
+        # set to zeros to keep from flying away
+        self.des[:] = 0.
+
     # main loop
     def run(self):
-        # - main control loop that runs at a desired frequency
-        # - and executes the angle controller at a high rate
-        # - and handles the associated shutdown
+        # main control loop that runs at a desired frequency
+        # - executes the angle controller at a high rate
+        # - handles the associated shutdown
 
         # run this loop continuously at desired rate
         while self.running[0]:
-            self.poll()
-            self.step()
+            self.poll(); #print("polled")
+            self.step(); #print("stepped")
             time.sleep(1./self.hz)
 
         # shutdown the raspberry pi
@@ -128,15 +148,19 @@ class _Controller:
         self.sh_reported.close()
         self.cmd_ser.close()
 
-        # return if logger flag not active        
-        if not self.logger: return
+        for key in self.sh_extra:
+            self.sh_extra[key].close()
 
+        # return if logger flag not active   
+        if not self.logger: return
+        
         # save data to directory
         tsave = str(np.datetime64('now'))        
         dsave = "targets.npy"
         usave = "inputs.npy"
         xsave = "states.npy"
         Isave = "images.npy"
+        Itsave = "image_stamps.npy"
         Ssave = "stamps.npy"
 
         # concatenate to 2D arrays
@@ -144,6 +168,7 @@ class _Controller:
         uh = np.stack(self.uh).T
         xh = np.stack(self.xh).T
         Ih = np.stack(self.Ih)
+        Iht = np.stack(self.It)
         sh = np.stack(self.th)
 
         # check if save_dir exists first
@@ -162,12 +187,22 @@ class _Controller:
             os.mkdir(spec_dir)
 
         # save blimp data
-        np.save(os.path.join(spec_dir, dsave), dh[:,:self.idx])
-        np.save(os.path.join(spec_dir, usave), uh[:,:self.idx])
-        np.save(os.path.join(spec_dir, xsave), xh[:,:self.idx])
-        np.save(os.path.join(spec_dir, Isave), Ih[:,:,:,:self.idx])
-        np.save(os.path.join(spec_dir, Ssave), sh[:self.idx])
-        
+        np.save(os.path.join(spec_dir, dsave), dh)
+        np.save(os.path.join(spec_dir, usave), uh)
+        np.save(os.path.join(spec_dir, xsave), xh)
+        np.save(os.path.join(spec_dir, Isave), Ih)
+        np.save(os.path.join(spec_dir, Itsave), Iht)
+        np.save(os.path.join(spec_dir, Ssave), sh)
+
+        for key in self.eh:
+            esave = key+".npy"
+            esave = esave.replace("/", "_")
+            data = np.stack(self.eh[key]).T
+            np.save(os.path.join(spec_dir, esave), data)            
+
+        print("Saved", xh.shape[1], "samples in", spec_dir)
+        print("Saved", Ih.shape[0], "images in", spec_dir)
+
     # interfacing with pi
     def poll(self):
         # get most recent bno and distance data
@@ -255,7 +290,7 @@ class _Controller:
         # prioritize vertical thrust
         updown_abs = u[2]
         if abs(updown_abs) > 0.1:
-            u *= 0.3
+            u *= 0.1
 
         # clip extraneous input
         u[2] = updown_abs
@@ -281,10 +316,18 @@ class _Controller:
             self.lock_I.acquire()
             I = self.img.copy()
             self.lock_I.release()
-        
-            self.idx += 1
+
             self.dh.append(des.copy())
             self.uh.append(u.copy())
             self.xh.append(x_.copy())
-            self.Ih.append(I.copy())
             self.th.append(self.x_stamp[0].copy())
+
+            if len(self.Ih) == 0 or np.sum(I-self.Ih[-1]) != 0:
+                self.Ih.append(I.copy())
+                self.It.append(self.x_stamp[0].copy())
+
+            for key in self.extra:
+                self.lock_extra[key].acquire()
+                extra = self.extra[key].copy()
+                self.lock_extra[key].release()
+                self.eh[key].append(extra)
