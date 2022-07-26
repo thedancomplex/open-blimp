@@ -7,6 +7,7 @@ import signal
 import struct
 import threading
 import time
+import traceback
 
 from multiprocessing import shared_memory as sm
 from numpy import pi
@@ -19,7 +20,7 @@ def handle_sensors(cfg, names, locks):
     # instantiate threads to handle sensor stream
     rcv = _Rcv(cfg, names, locks)
     rcv.run()
-    
+
 class _Rcv:
     """ private sensor handler that runs on a spawned process to read data
         - this handler should NOT be used by an application
@@ -79,32 +80,31 @@ class _Rcv:
         # send the start signal
         sock = socket.socket()
         sock.settimeout(0.5)
-        connected, tries = False, 0
-
-        while not connected and tries < num_tries:
+        connected = False
+        while not connected and self.running[0]:
             try:
                 sock.connect((self.cfg['pi_ip'], 8485))
                 connected = True
 
-            except: tries += 1    
+            except: pass
 
-        if tries < num_tries:
+        success = True
+        if connected:
             con = sock.makefile('wb')
             con.write(data)
-            con.flush()
-            sock.close()
-            print("Connected to", self.cfg['pi_ip'])
+            try: con.flush()
+            except: success = False
 
-        else: 
-            print("Couldn't connect to", self.cfg['pi_ip'])
-            return
-
+        sock.close()
+        if success and connected: print("Connected to", self.cfg['pi_ip'])
+        else: print("Couldn't connect to", self.cfg['pi_ip']); return
+            
         # start the threads
         self.img_thread.start()
         self.bno_thread.start()
         self.dis_thread.start()
 
-        # waits for threads to finish and then performs cleanup
+        # wait for threads to finish and then performs cleanup
         self.img_thread.join()
         self.bno_thread.join()
         self.dis_thread.join()
@@ -123,18 +123,22 @@ class _Rcv:
 
             except: tries += 1        
 
+        success = True
         if tries < num_tries:
             con = sock.makefile('wb')
             con.write(data)
-            con.flush()
-            con.close()
-            print("Ending! Putting blimp", self.cfg['id_num'], "to sleep...")
-        else: 
-            print("Connection to ", self.cfg['pi_ip'], " failed! Skipping sleep request...")
+            try: con.flush()
+            except: success = False
+
+        if success: print("Ending! Putting blimp", self.cfg['id_num'], "to sleep...")
+        else: print("Connection to ", self.cfg['pi_ip'], " failed! Skipping sleep request...")
+        con.close()
+
         
     def handler(self, signum, frame):
         # - ctrl-c handler to start process cleanup
         self.running[0] = False
+        print("Ctrl-C shutdown of pi rcv!")
 
     def handle_img_read(self):
         # - parses all image data coming from the pi and stores it
@@ -170,7 +174,7 @@ class _Rcv:
                 # read image data
                 image_stream = io.BytesIO()
                 try: img_data = img_connection.read(image_len)
-                except: continue
+                except: traceback.print_exc()
 
                 # ignore if wrong size
                 if len(img_data) != image_len: continue
@@ -178,19 +182,22 @@ class _Rcv:
                 image_stream.seek(0)
 
                 # parse image
-                nparr = np.frombuffer(image_stream.read(), np.uint8)
-                imgBGR = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
-                img = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
+                try:
+                    nparr = np.frombuffer(image_stream.read(), np.uint8)
+                    imgBGR = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
+                    img = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
 
-                # read current time
-                tframe = np.frombuffer(img_connection.read(8), np.double)
-                img_stamp = tframe[0]
+                    # read current time
+                    tframe = np.frombuffer(img_connection.read(8), np.double)
+                    img_stamp = tframe[0]
 
-                # protected update (wait for lock to be free)
-                self.lock_img.acquire()
-                self.img[:,:,:] = img
-                self.img_stamp[0] = img_stamp       
-                self.lock_img.release()
+                    # protected update (wait for lock to be free)
+                    self.lock_img.acquire()
+                    self.img[:,:,:] = img
+                    self.img_stamp[0] = img_stamp       
+                    self.lock_img.release()
+
+                except: traceback.print_exc()
 
         sock.close()
         self.sh_img.close()
@@ -203,6 +210,7 @@ class _Rcv:
 
         # setup socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  
         sock.setblocking(0)
         sock.settimeout(0.5)        
         sock.bind(('0.0.0.0', 1025+3*(self.cfg['id_num']-1)))
@@ -239,6 +247,7 @@ class _Rcv:
 
         # setup socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.setblocking(0)
         sock.settimeout(0.5)        
         sock.bind(('0.0.0.0', 1026+3*(self.cfg['id_num']-1)))
