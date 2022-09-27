@@ -11,6 +11,7 @@ fps: 15
 qual: 15
 
 # motor board parameters
+positive_only: True
 k_r:  [0.45, 0., -1.7]
 k_p:  [0.45, 0., -1.7]
 k_yw: [0.002, 0.001, 0.07]
