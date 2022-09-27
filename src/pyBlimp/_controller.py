@@ -32,6 +32,7 @@ class _Controller:
     def __init__(self, ser, cfg, locks, names, extras, logger=False):
         im_sz = (cfg['im_rows'], cfg['im_cols'], 3)
         self.id_num = cfg['id_num']
+        self.positive_only = cfg['positive_only']
         self.logger = logger
         self.hz = 100.
 
@@ -294,6 +295,7 @@ class _Controller:
 
         # clip extraneous input
         u[2] = updown_abs
+        if self.positive_only: u[2] = min(0, u[2])
         u = np.clip(u, -0.8, 0.8)
 
         # mix commands to get motor inputs
