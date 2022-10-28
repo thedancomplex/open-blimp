@@ -58,8 +58,9 @@ class serManager:
         while running.buf[0]:
             for c in cmds:
                 c[0].acquire()
-                msgb = bytes(c[1].buf[:])
-                ser.write(bytes(c[1].buf[:]))                    
+                b_id = bytes(c[1].buf[:])
+                if b_id == -1: ser.write(bytes(c[1].buf[:-1]))
+                else: ser.write(bytes(c[1].buf[:]))                    
                 c[0].release()                
 
         # cleanup
