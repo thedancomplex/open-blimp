@@ -192,8 +192,9 @@ class _Rcv:
                     img_stamp = tframe[0]
 
                     # protected update (wait for lock to be free)
+                    is0, is1, is2 = img.shape
                     self.lock_img.acquire()
-                    self.img[:,:,:] = img
+                    self.img[:is0,:is1,:is2] = img
                     self.img_stamp[0] = img_stamp       
                     self.lock_img.release()
 
@@ -232,7 +233,7 @@ class _Rcv:
 
                 # protected update (skip if lock isn't available)
                 if self.lock_bno.acquire(False):                    
-                    self.bno[:] = new_bno[:-1]
+                    self.bno[:10] = new_bno[:-1]
                     self.bno_stamp[0] = new_bno[-1]
                     self.lock_bno.release()
         
