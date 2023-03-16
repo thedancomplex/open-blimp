@@ -28,6 +28,11 @@ if __name__ == "__main__":
 
     # show the FPV
     fig, axes = plt.subplots(1,1)
+    I = b.get_image(0)
+    h = axes.imshow(I)
+    axes.set_xticks([])
+    axes.set_yticks([])
+    axes.set_title("FPV")
 
     # desired states to track
     des = np.zeros(4)
@@ -44,14 +49,9 @@ if __name__ == "__main__":
         des[3] = np.clip(des[3]+0.05*ax[3], 0.0, 2.5)
         b.set_des(des, 0)
 
-        # show the video
+        # show the feed
         I = b.get_image(0)
-        axes.clear()
-        axes.imshow(I)
-        axes.set_xticks([])
-        axes.set_yticks([])
-        axes.set_title("FPV")
-
+        h.set_data(I)
         plt.draw(); plt.pause(0.0001)
 
         # break if the figure is closed
