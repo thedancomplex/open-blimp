@@ -94,7 +94,7 @@ class Blimp:
 
         # setup shared image access
         self.lock_I = mp.Lock()
-        self.sh_img = sm.SharedMemory(create=True, size=np.prod(im_sz))        
+        self.sh_img = sm.SharedMemory(create=True, size=int(np.prod(im_sz)))        
         self.sh_img_stamp = sm.SharedMemory(create=True, size=8)
         self.img = np.ndarray(im_sz, dtype=np.uint8, buffer=self.sh_img.buf)
         self.img_stamp = np.ndarray(1, np.double, buffer=self.sh_img_stamp.buf)
@@ -263,12 +263,9 @@ class Blimp:
             - uses a write-safe lock to get the altitude
         """
         # protected read
-        self.lock_x.acquire()
-        x_ = self.x.copy()
-        self.lock_x.release()    
+        eul = self.get_euler()
 
         # correct altitude and return
-        eul = blimp_coordinates(euler(x_[1:5]), self.rot0.copy())
         return x_[0]*np.cos(eul[0])*np.cos(eul[1])
 
     def set_extra(self, name, extra):

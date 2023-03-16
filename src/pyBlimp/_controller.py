@@ -114,12 +114,13 @@ class _Controller:
         # setup control-c handler
         signal.signal(signal.SIGINT, self.handler)
         self.i = 0
+       
     def handler(self, signum, frame):
         # - ctrl-c handler to start process cleanup
         self.running[0] = False
 
         # set to zeros to keep from flying away
-        self.des[:] = 0.
+        self.des[:4] = 0.
 
     # main loop
     def run(self):
@@ -129,8 +130,8 @@ class _Controller:
 
         # run this loop continuously at desired rate
         while self.running[0]:
-            self.poll(); #print("polled")
-            self.step(); #print("stepped")
+            self.poll()
+            self.step()
             time.sleep(1./self.hz)
 
         # shutdown the raspberry pi
@@ -156,7 +157,8 @@ class _Controller:
         if not self.logger: return
         
         # save data to directory
-        tsave = str(np.datetime64('now'))        
+        tsave = str(np.datetime64('now')).replace(":", "_")
+
         dsave = "targets.npy"
         usave = "inputs.npy"
         xsave = "states.npy"
@@ -310,9 +312,9 @@ class _Controller:
 
         # try to write a command unless already occupied
         self.lock_ser.acquire()
-        self.cmd_ser.buf[:] = msgb
+        self.cmd_ser.buf[:len(msgb)] = msgb
         self.lock_ser.release()
-        
+
         # log data (if requested)
         if self.logger:
             self.lock_I.acquire()

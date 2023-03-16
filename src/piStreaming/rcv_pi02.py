@@ -15,7 +15,7 @@ class MultiRcv:
         im_sz = (cfg['im_rows'], cfg['im_cols'], 3)
 
         # create shared memory for mp
-        self.sh_img = sm.SharedMemory(create=True, size=np.prod(im_sz))
+        self.sh_img = sm.SharedMemory(create=True, size=int(np.prod(im_sz)))
         self.sh_bno = sm.SharedMemory(create=True, size=80)
         self.sh_dis = sm.SharedMemory(create=True, size=8)
         self.sh_img_stamp = sm.SharedMemory(create=True, size=8)
