@@ -5,7 +5,7 @@ import time
 
 from pyBlimp.blimp import BlimpManager
 from pyBlimp.utils import *
-from utils.js_utils import JoyStick_helper
+from utils.at_utils import AprilTagHelper
 
 if __name__ == "__main__":
     # setup exit on ctrl-c
@@ -23,6 +23,9 @@ if __name__ == "__main__":
     # build the blimp object
     b = BlimpManager(cfg, "COM3", logger=False)
 
+    # setup apriltag detector
+    at = AprilTagHelper("utils/K_360x240.txt")
+
     # show the FPV
     fig, axes = plt.subplots(1,1)
     I = b.get_image(0)
@@ -37,6 +40,8 @@ if __name__ == "__main__":
 
     while running and b.get_running(0):
         # find the relative position of the apriltag
+        I = b.get_image(0)
+        tags, I_labeled = at.detect(I, label=True)
 
         # decide inputs
         des[0] =  0.5*ax[0]
@@ -46,8 +51,7 @@ if __name__ == "__main__":
         b.set_des(des, 0)
 
         # show the feed
-        I = b.get_image(0)
-        h.set_data(I)
+        h.set_data(I_labeled)
         plt.draw(); plt.pause(0.0001)
 
         # break if the figure is closed
