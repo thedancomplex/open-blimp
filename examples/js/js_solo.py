@@ -21,7 +21,7 @@ if __name__ == "__main__":
     cfg = read_config(cfg_paths)
 
     # build the blimp object
-    b = BlimpManager(cfg, "COM3", logger=True)
+    b = BlimpManager(cfg, "COM3", logger=False)
 
     # setup the joystick reader
     js = JoyStick_helper()
