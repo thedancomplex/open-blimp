@@ -58,9 +58,10 @@ class serManager:
         while running.buf[0]:
             for c in cmds:
                 c[0].acquire()
-                b_id = bytes(c[1].buf[0])
-                if b_id == -1: ser.write(bytes(c[1].buf[:9]))
-                else: ser.write(bytes(c[1].buf[:10]))                    
+                msg = bytes(c[1].buf[:10])
+                b_id = msg[-2]
+                if b_id == 255: ser.write(msg[:9])
+                else: ser.write(msg)
                 c[0].release()                
 
         # cleanup
@@ -74,7 +75,7 @@ def create_serial(port):
     ser = serial.Serial()
     ser.port = port
     ser.baudrate = 921600
-    ser.write_timeout = 0
+    ser.write_timeout = 10
     ser.open()
     return ser
 
