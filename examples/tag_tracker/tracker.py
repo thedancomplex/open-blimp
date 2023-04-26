@@ -42,13 +42,12 @@ if __name__ == "__main__":
         # find the relative position of the apriltag
         I = b.get_image(0)
         tags, I_labeled = at.detect(I, label=True)
-
+        print(tags)
         # decide inputs
-        des[0] =  0.5*ax[0]
-        des[1] =  0.5*ax[1]
+        des[0] = 0
+        des[1] = tags[0]
         des[2] = wrap(des[2]-0.05*ax[2])
-        des[3] = np.clip(des[3]+0.05*ax[3], 0.0, 2.5)
-        b.set_des(des, 0)
+        #b.set_des(des, 0)
 
         # show the feed
         h.set_data(I_labeled)
