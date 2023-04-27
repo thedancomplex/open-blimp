@@ -34,20 +34,23 @@ if __name__ == "__main__":
     axes.set_yticks([])
     axes.set_title("FPV")
 
-    # desired states to track
-    des = np.zeros(4)
-    des[3] = 1.5
-
     while running and b.get_running(0):
         # find the relative positions of other blimps
         I = b.get_image(0)
         loc, I_labeled = et.detect(I, label=True)
 
-        # decide inputs
-        des[0] =  0.5*ax[0]
-        des[1] =  0.5*ax[1]
-        des[2] = wrap(des[2]-0.05*ax[2])
-        des[3] = np.clip(des[3]+0.05*ax[3], 0.0, 2.5)
+        # float in place if no blimps detected
+        des = np.zeros(4)
+        des[3] = 1.5
+
+        # decide inputs to track a single blimp
+        if loc is not None:
+            distance = np.linalg.norm(loc[:2])
+            angle = np.arctan2(loc[1], loc[0])
+            
+            des[1] = -0.1*(0.5 - distance)
+            des[2] = 0.5*angle + b.get_euler(0)[2]
+
         b.set_des(des, 0)
 
         # show the feed

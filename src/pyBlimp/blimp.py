@@ -290,7 +290,7 @@ class Blimp:
     
         # limit the desired states to appropriate space    
         des[3] = np.clip(des[3], 0.0, 2.5)
-        des[1:] = wrap(des[1:])
+        des[0:3] = wrap(des[0:3])
         
         # engage auto mode (no lock needed)
         self.man[0] = False

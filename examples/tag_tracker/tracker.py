@@ -24,7 +24,7 @@ if __name__ == "__main__":
     b = BlimpManager(cfg, "COM3", logger=False)
 
     # setup apriltag detector
-    at = AprilTagHelper("utils/K_360x240.txt")
+    at = AprilTagHelper("utils/K_360x240.txt", "utils/dist_360x240.txt")
 
     # show the FPV
     fig, axes = plt.subplots(1,1)
@@ -34,20 +34,25 @@ if __name__ == "__main__":
     axes.set_yticks([])
     axes.set_title("FPV")
 
-    # desired states to track
-    des = np.zeros(4)
-    des[3] = 1.5
-
     while running and b.get_running(0):
         # find the relative position of the apriltag
         I = b.get_image(0)
         tags, I_labeled = at.detect(I, label=True)
-        print(tags)
-        # decide inputs
-        des[0] = 0
-        des[1] = tags[0]
-        des[2] = wrap(des[2]-0.05*ax[2])
-        #b.set_des(des, 0)
+
+        # float in place if no tag detected
+        des = np.zeros(4)
+        des[3] = 1.5
+
+        # decide inputs to track a single tag
+        if len(tags) > 0:
+            tag_pos = tags[0][2]
+            distance = np.linalg.norm(tag_pos[:2])
+            angle = np.arctan2(tag_pos[1], tag_pos[0])
+            
+            des[1] = -0.1*(0.5 - distance)
+            des[2] = 0.5*angle + b.get_euler(0)[2]
+
+        b.set_des(des, 0)
 
         # show the feed
         h.set_data(I_labeled)
