@@ -34,20 +34,36 @@ if __name__ == "__main__":
     axes.set_yticks([])
     axes.set_title("FPV")
 
-    # desired states to track
-    des = np.zeros(4)
-    des[3] = 1.5
-
+    # manual/assisted mode flag
+    manual_mode = True
+    
     while running and b.get_running(0):
         # handle the joystick
-        ax, _, _ = js.get_state()
-        
-        # decide inputs
-        des[0] =  0.5*ax[0]
-        des[1] =  0.5*ax[1]
-        des[2] = wrap(des[2]-0.05*ax[2])
-        des[3] = np.clip(des[3]+0.05*ax[3], 0.0, 2.5)
-        b.set_des(des, 0)
+        ax, ybutton, _ = js.get_state()
+
+        # swap between manual and assisted modes
+        if ybutton: manual_mode = not manual_mode
+
+        if manual_mode:
+            cmd = np.zeros(4)
+            
+            # set inputs
+            cmd[0] = ax[0]
+            cmd[1] = ax[1]
+            cmd[2] = ax[2]
+            cmd[3] = ax[4]
+            b.set_cmd(cmd, 0)
+
+        else:
+            des = np.zeros(4)
+            des[3] = 1.5
+            
+            # decide inputs
+            des[0] =  0.5*ax[0]
+            des[1] =  0.5*ax[1]
+            des[2] = wrap(des[2]-0.05*ax[2])
+            des[3] = np.clip(des[3]+0.05*ax[3], 0.0, 2.5)
+            b.set_des(des, 0)
 
         # show the feed
         I = b.get_image(0)

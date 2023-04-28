@@ -11,7 +11,8 @@ class JoyStick_helper:
         self.js = pygame.joystick.Joystick(js_id)
         
         self.dead = 0.1
-
+        self.button_state = False
+        
     def get_state(self):
         pygame.event.pump()
         llr = self.js.get_axis(0)
@@ -29,10 +30,12 @@ class JoyStick_helper:
         rlr += self.dead*(rlr < 0) - self.dead*(rlr > 0)
         rud += self.dead*(rud < 0) - self.dead*(rud > 0)
 
-        lshoulder = self.js.get_button(4)
-        rshoulder = self.js.get_button(5)
-
-        return [llr, lud, rlr, rud], lshoulder, rshoulder
+        button_now = self.js.get_button(4)
+        button_event = False
+        if button_now and self.button_state: button_event = True
+        self.button_state = button_now
+        
+        return [llr, lud, rlr, rud], button_event
         
 if __name__ == "__main__":
     js = JoyStick_helper(0)
