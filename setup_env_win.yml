@@ -7,10 +7,9 @@ dependencies:
 - scipy
 - numpy
 - pyserial
-- opencv-contrib-python=4.6.0.66
 - matplotlib
 - pip
 - pip:
   - pyyaml
   - pygame
-  - pupil-apriltags
+  - opencv-contrib-python==4.6.0.66
