@@ -35,7 +35,7 @@ if __name__ == "__main__":
     axes.set_title("FPV")
 
     # manual/assisted mode flag
-    manual_mode = True
+    manual_mode = False
     des = np.zeros(4)
     des[3] = 1.5
     
@@ -51,7 +51,6 @@ if __name__ == "__main__":
                 des[3] = 1.5
                 
             manual_mode = not manual_mode
-
         
         if manual_mode:
             cmd = np.zeros(4)
