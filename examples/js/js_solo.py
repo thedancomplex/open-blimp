@@ -17,7 +17,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, exit_handle)
 
     # load desired configs
-    cfg_paths = ["configs/config2.yaml"]
+    cfg_paths = ["configs/config1.yaml"]
     cfg = read_config(cfg_paths)
 
     # build the blimp object
@@ -36,28 +36,34 @@ if __name__ == "__main__":
 
     # manual/assisted mode flag
     manual_mode = True
+    des = np.zeros(4)
+    des[3] = 1.5
     
     while running and b.get_running(0):
         # handle the joystick
-        ax, ybutton = js.get_state(); print(manual_mode)
+        ax, ybutton = js.get_state()
+
         # swap between manual and assisted modes
-        if ybutton: manual_mode = not manual_mode
+        if ybutton:
+            if not manual_mode:
+                b.zero_z_rot(0)
+                des = np.zeros(4)
+                des[3] = 1.5
+                
+            manual_mode = not manual_mode
 
         
         if manual_mode:
             cmd = np.zeros(4)
             
             # set inputs
-            cmd[0] = ax[0]
-            cmd[1] = ax[1]
-            cmd[2] = ax[2]
-            cmd[3] = ax[3]
+            cmd[0] = ax[1]
+            cmd[1] = ax[0]
+            cmd[2] = -ax[3]
+            cmd[3] = ax[2]
             b.set_cmd(cmd, 0)
 
-        else:
-            des = np.zeros(4)
-            des[3] = 1.5
-            
+        else:           
             # decide inputs
             des[0] =  0.5*ax[0]
             des[1] =  0.5*ax[1]

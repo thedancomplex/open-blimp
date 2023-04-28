@@ -88,12 +88,14 @@ class _Rcv:
 
             except: pass
 
-        success = True
+        success = False
         if connected:
             con = sock.makefile('wb')
             con.write(data)
-            try: con.flush()
-            except: success = False
+            try:
+                con.flush()
+                success = True
+            except: pass
 
         sock.close()
         if success and connected: print("Connected to", self.cfg['pi_ip'])
@@ -110,6 +112,7 @@ class _Rcv:
         self.dis_thread.join()
 
         # tell the pi to stop
+        print("Putting blimp to sleep!")
         msg = "SLEEP000000"
         data = struct.pack("<11s", msg.encode('UTF-8'))
 
