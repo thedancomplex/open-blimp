@@ -3,13 +3,12 @@ channels:
 - menpo
 - defaults
 dependencies:
-- python=3.8
+- python=3.9
 - scipy
 - numpy
 - pyserial
 - opencv-contrib-python=4.6.0.66
 - matplotlib
-- pupil-apriltags
 - pip
 - pip:
   - pyyaml
