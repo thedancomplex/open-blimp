@@ -30,9 +30,11 @@ class JoyStick_helper:
         rlr += self.dead*(rlr < 0) - self.dead*(rlr > 0)
         rud += self.dead*(rud < 0) - self.dead*(rud > 0)
 
-        button_now = self.js.get_button(2)
+        button_now = self.js.get_button(3)
         button_event = False
-        if button_now and self.button_state: button_event = True
+        if button_now and (button_now != self.button_state):
+            button_event = True
+            
         self.button_state = button_now
         
         return [llr, lud, rlr, rud], button_event
