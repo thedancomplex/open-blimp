@@ -39,8 +39,7 @@ if __name__ == "__main__":
     
     while running and b.get_running(0):
         # handle the joystick
-        ax, ybutton, _ = js.get_state()
-
+        ax, ybutton = js.get_state()
         # swap between manual and assisted modes
         if ybutton: manual_mode = not manual_mode
 
@@ -51,7 +50,7 @@ if __name__ == "__main__":
             cmd[0] = ax[0]
             cmd[1] = ax[1]
             cmd[2] = ax[2]
-            cmd[3] = ax[4]
+            cmd[3] = ax[3]
             b.set_cmd(cmd, 0)
 
         else:
